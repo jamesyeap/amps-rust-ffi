@@ -4,6 +4,9 @@
 # AMPS C++ client library (downloaded dependency)
 /amps-client/
 
+# AMPS server binaries (downloaded dependency)
+/tests/docker/downloaded_folders/
+
 # C++ wrapper build artifacts
 /c-wrapper/build/
 

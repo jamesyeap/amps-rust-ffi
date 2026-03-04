@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AMPSConfig>
+  <!-- The name of AMPS instance -->
+  <Name>TestAMPS</Name>
+
+  <!-- Configure the admin/stats HTTP server -->
+  <Admin>
+    <InetAddr>8085</InetAddr>
+  </Admin>
+
+  <RequiredMinimumVersion>5.0</RequiredMinimumVersion>
+
+  <Transports>
+    <!-- json messages using TCP -->
+    <Transport>
+      <Name>json-tcp</Name>
+      <Type>tcp</Type>
+      <InetAddr>9007</InetAddr>
+      <ReuseAddr>true</ReuseAddr>
+      <MessageType>json</MessageType>
+      <Protocol>amps</Protocol>
+    </Transport>
+
+    <!-- admin transport using nvfix -->
+    <Transport>
+      <Name>admin-tcp</Name>
+      <Type>tcp</Type>
+      <InetAddr>9008</InetAddr>
+      <ReuseAddr>true</ReuseAddr>
+      <MessageType>nvfix</MessageType>
+      <Protocol>fix</Protocol>
+    </Transport>
+  </Transports>
+
+  <!-- SOW-enabled topics -->
+  <SOW>
+    <!-- SOW topic for query tests -->
+    <Topic>
+      <FileName>/app/sow/sow-test.sow</FileName>
+      <Topic>sow-test</Topic>
+      <MessageType>json</MessageType>
+      <Key>/id</Key>
+    </Topic>
+  </SOW>
+
+  <Logging>
+    <Target>
+      <Protocol>stdout</Protocol>
+      <Level>info</Level>
+    </Target>
+  </Logging>
+</AMPSConfig>
