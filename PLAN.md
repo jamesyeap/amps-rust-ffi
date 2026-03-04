@@ -1015,6 +1015,16 @@ docker-compose -f tests/docker/docker-compose.yml down
 
 8. **`logon()` API signature**: The correct overloads are `logon(timeout)` and `logon(options, timeout)`. The plan's `Authenticator` parameter is abstract and cannot be instantiated.
 
+### Phase 4-6 Findings
+
+9. **Zlib linking issue**: The AMPS C library (`amps_zlib.c`) dynamically loads zlib functions at runtime using `dlopen()`/`dlsym()`. When statically linking, the function pointers (`amps_deflate`, `amps_inflate`, etc.) remain undefined because they're expected to be resolved at runtime. The solution is to provide a zlib shim (`c-wrapper/src/zlib_shim.c`) that initializes these function pointers to point to static wrapper functions that call the system zlib. The shim uses `__attribute__((constructor))` to ensure initialization happens before main.
+
+10. **Callback trampoline pattern**: Rust closures can be used as AMPS message handlers through a two-step boxing process. First, the closure is boxed as `Box<dyn FnMut(&Message) + Send>`, then that box is boxed again as `Box<Box<dyn FnMut(&Message) + Send>>` to get a stable pointer that can be passed through the FFI boundary as `void*`. The C++ wrapper calls a C trampoline function that reconstructs the Rust closure and invokes it.
+
+11. **Thread safety**: The AMPS C++ client is not thread-safe. The Rust `Client` type correctly implements `Send` but not `Sync`, enforcing at compile time that a client cannot be shared between threads without synchronization.
+
+12. **CString conversion**: All string parameters that cross the FFI boundary must be converted to `CString`, which can fail if the string contains null bytes. The `From<NulError>` implementation for `AmpsError` handles this case gracefully.
+
 9. **`setDisconnectHandler` is deprecated**: The AMPS 5.3.5.1 API marks it with `[[deprecated]]`. The wrapper uses `#pragma GCC diagnostic` to suppress the warning. A `DisconnectContext` struct + static trampoline function is used instead of a lambda to work without `AMPS_USE_FUNCTIONAL`.
 
 10. **`publish()` requires topic length**: The 4-arg overload `publish(topic, data, data_len, expiration)` doesn't exist. The correct overload is `publish(topic, topic_len, data, data_len, expiration)` (5 args).
@@ -1064,30 +1074,30 @@ docker-compose -f tests/docker/docker-compose.yml down
 - [x] Define `AmpsResult<T>` type alias
 
 ### Phase 4: Safe Rust API — Client
-- [ ] Implement `Client` struct wrapping the opaque FFI handle in `src/client.rs`
-- [ ] Implement `Client::new()` (calls `amps_ffi_client_create`)
-- [ ] Implement `Client::connect()` (calls `amps_ffi_client_connect`)
-- [ ] Implement `Client::disconnect()` (calls `amps_ffi_client_disconnect`)
-- [ ] Implement `Client::logon()` (calls `amps_ffi_client_logon`)
-- [ ] Implement `Client::publish()` and `Client::publish_with_expiration()`
-- [ ] Implement `Client::delta_publish()`
-- [ ] Implement `Client::subscribe()` with callback trampoline pattern
-- [ ] Implement `Client::sow()` with callback trampoline pattern
-- [ ] Implement `Client::sow_and_subscribe()` with callback trampoline pattern
-- [ ] Implement `Client::unsubscribe()` and `Client::unsubscribe_all()`
-- [ ] Implement `Client::set_disconnect_handler()`
-- [ ] Implement `Client::set_heartbeat()`
-- [ ] Implement `Drop` for `Client` (calls `amps_ffi_client_destroy`)
-- [ ] Mark `Client` as `Send` (but not `Sync`)
+- [x] Implement `Client` struct wrapping the opaque FFI handle in `src/client.rs`
+- [x] Implement `Client::new()` (calls `amps_ffi_client_create`)
+- [x] Implement `Client::connect()` (calls `amps_ffi_client_connect`)
+- [x] Implement `Client::disconnect()` (calls `amps_ffi_client_disconnect`)
+- [x] Implement `Client::logon()` (calls `amps_ffi_client_logon`)
+- [x] Implement `Client::publish()` and `Client::publish_with_expiration()`
+- [x] Implement `Client::delta_publish()`
+- [x] Implement `Client::subscribe()` with callback trampoline pattern
+- [x] Implement `Client::sow()` with callback trampoline pattern
+- [x] Implement `Client::sow_and_subscribe()` with callback trampoline pattern
+- [x] Implement `Client::unsubscribe()` and `Client::unsubscribe_all()`
+- [x] Implement `Client::set_disconnect_handler()`
+- [x] Implement `Client::set_heartbeat()`
+- [x] Implement `Drop` for `Client` (calls `amps_ffi_client_destroy`)
+- [x] Mark `Client` as `Send` (but not `Sync`)
 
 ### Phase 5: Safe Rust API — Message & Subscription
-- [ ] Implement `Message` struct in `src/message.rs` with accessor methods (`data`, `topic`, `command`, `sow_key`, `bookmark`, `sub_id`, `command_id`)
-- [ ] Implement `MessageHandler` trait in `src/subscription.rs`
-- [ ] Implement `MessageHandler` for closures (`FnMut(&Message) + Send`)
-- [ ] Implement `Subscription` struct with cleanup logic
+- [x] Implement `Message` struct in `src/message.rs` with accessor methods (`data`, `topic`, `command`, `sow_key`, `bookmark`, `sub_id`, `command_id`)
+- [x] Implement `MessageHandler` trait in `src/subscription.rs`
+- [x] Implement `MessageHandler` for closures (`FnMut(&Message) + Send`)
+- [x] Implement `Subscription` struct with cleanup logic
 
 ### Phase 6: Library Root
-- [ ] Set up `src/lib.rs` with module declarations and public re-exports
+- [x] Set up `src/lib.rs` with module declarations and public re-exports
 
 ### Phase 7: Testing
 - [ ] Create `tests/docker/docker-compose.yml` for AMPS server
