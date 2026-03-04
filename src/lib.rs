@@ -1,3 +1,19 @@
+//! AMPS Rust FFI - Safe Rust bindings for the AMPS C++ client library.
+//!
+//! This crate provides Rust bindings for the AMPS (Advanced Message Processing System)
+//! C++ client library, enabling publish/subscribe messaging, SOW queries, and more
+//! from Rust applications.
+//!
+//! # FFI Module
+//!
+//! The [`ffi`](crate::ffi) module contains the low-level FFI bindings auto-generated
+//! by bindgen from the C wrapper header file. These bindings are `unsafe` and require
+//! careful handling of pointers and memory.
+//!
+//! A safe, idiomatic Rust API is planned for future development.
+
+pub mod ffi;
+
 #[cfg(test)]
 mod tests {
     #[test]
