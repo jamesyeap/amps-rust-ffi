@@ -380,8 +380,14 @@ impl Client {
             ffi::amps_ffi_client_subscribe(
                 self.inner,
                 topic.as_ptr(),
-                filter_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(ptr::null()),
-                options_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(ptr::null()),
+                filter_cstr
+                    .as_ref()
+                    .map(|s| s.as_ptr())
+                    .unwrap_or(ptr::null()),
+                options_cstr
+                    .as_ref()
+                    .map(|s| s.as_ptr())
+                    .unwrap_or(ptr::null()),
                 timeout_ms,
                 Some(message_handler_trampoline),
                 user_data,
@@ -458,8 +464,14 @@ impl Client {
             ffi::amps_ffi_client_sow(
                 self.inner,
                 topic.as_ptr(),
-                filter_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(ptr::null()),
-                order_by_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(ptr::null()),
+                filter_cstr
+                    .as_ref()
+                    .map(|s| s.as_ptr())
+                    .unwrap_or(ptr::null()),
+                order_by_cstr
+                    .as_ref()
+                    .map(|s| s.as_ptr())
+                    .unwrap_or(ptr::null()),
                 batch_size,
                 top_n,
                 timeout_ms,
@@ -537,8 +549,14 @@ impl Client {
             ffi::amps_ffi_client_sow_and_subscribe(
                 self.inner,
                 topic.as_ptr(),
-                filter_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(ptr::null()),
-                options_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(ptr::null()),
+                filter_cstr
+                    .as_ref()
+                    .map(|s| s.as_ptr())
+                    .unwrap_or(ptr::null()),
+                options_cstr
+                    .as_ref()
+                    .map(|s| s.as_ptr())
+                    .unwrap_or(ptr::null()),
                 timeout_ms,
                 Some(message_handler_trampoline),
                 user_data,
@@ -568,8 +586,9 @@ impl Client {
             message: [0; 1024],
         };
 
-        let result =
-            unsafe { ffi::amps_ffi_client_unsubscribe(self.inner, sub_id.as_ptr(), &mut error_info) };
+        let result = unsafe {
+            ffi::amps_ffi_client_unsubscribe(self.inner, sub_id.as_ptr(), &mut error_info)
+        };
 
         if result as i32 != ffi::amps_ffi_error_t_AMPS_FFI_OK as i32 {
             return Err(AmpsError::from(error_info));
@@ -639,7 +658,11 @@ impl Client {
     ///
     /// * `heartbeat_time_sec` - Interval between heartbeats in seconds
     /// * `read_timeout_sec` - Read timeout in seconds
-    pub fn set_heartbeat(&mut self, heartbeat_time_sec: u32, read_timeout_sec: u32) -> AmpsResult<()> {
+    pub fn set_heartbeat(
+        &mut self,
+        heartbeat_time_sec: u32,
+        read_timeout_sec: u32,
+    ) -> AmpsResult<()> {
         let result = unsafe {
             ffi::amps_ffi_client_set_heartbeat(self.inner, heartbeat_time_sec, read_timeout_sec)
         };

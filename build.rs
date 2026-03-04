@@ -30,10 +30,10 @@ fn main() {
 
     // Link system libraries required by AMPS
     println!("cargo:rustc-link-lib=pthread");
-    
+
     // Link system zlib - AMPS uses dynamic loading but we need to link it for the symbols
     println!("cargo:rustc-link-lib=z");
-    
+
     // Link dynamic loader for amps_zlib.c (dlopen/dlsym)
     if target.contains("linux") || target.contains("apple") {
         println!("cargo:rustc-link-lib=dl");

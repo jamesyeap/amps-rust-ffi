@@ -107,9 +107,7 @@ impl Message {
             if ptr.is_null() {
                 return "";
             }
-            CStr::from_ptr(ptr)
-                .to_str()
-                .unwrap_or("")
+            CStr::from_ptr(ptr).to_str().unwrap_or("")
         }
     }
 
@@ -131,9 +129,7 @@ impl Message {
             if ptr.is_null() {
                 return "";
             }
-            CStr::from_ptr(ptr)
-                .to_str()
-                .unwrap_or("")
+            CStr::from_ptr(ptr).to_str().unwrap_or("")
         }
     }
 
@@ -151,9 +147,7 @@ impl Message {
             if ptr.is_null() {
                 return "";
             }
-            CStr::from_ptr(ptr)
-                .to_str()
-                .unwrap_or("")
+            CStr::from_ptr(ptr).to_str().unwrap_or("")
         }
     }
 
@@ -171,9 +165,7 @@ impl Message {
             if ptr.is_null() {
                 return "";
             }
-            CStr::from_ptr(ptr)
-                .to_str()
-                .unwrap_or("")
+            CStr::from_ptr(ptr).to_str().unwrap_or("")
         }
     }
 
@@ -188,9 +180,7 @@ impl Message {
             if ptr.is_null() {
                 return "";
             }
-            CStr::from_ptr(ptr)
-                .to_str()
-                .unwrap_or("")
+            CStr::from_ptr(ptr).to_str().unwrap_or("")
         }
     }
 
@@ -207,9 +197,7 @@ impl Message {
             if ptr.is_null() {
                 return "";
             }
-            CStr::from_ptr(ptr)
-                .to_str()
-                .unwrap_or("")
+            CStr::from_ptr(ptr).to_str().unwrap_or("")
         }
     }
 

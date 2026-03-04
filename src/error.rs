@@ -134,11 +134,9 @@ impl From<ffi::amps_ffi_error_info_t> for AmpsError {
             ffi::amps_ffi_error_t_AMPS_FFI_ERROR_CONNECTION => AmpsError::Connection {
                 message: message.clone(),
             },
-            ffi::amps_ffi_error_t_AMPS_FFI_ERROR_ALREADY_CONNECTED => {
-                AmpsError::AlreadyConnected {
-                    message: message.clone(),
-                }
-            }
+            ffi::amps_ffi_error_t_AMPS_FFI_ERROR_ALREADY_CONNECTED => AmpsError::AlreadyConnected {
+                message: message.clone(),
+            },
             ffi::amps_ffi_error_t_AMPS_FFI_ERROR_AUTHENTICATION => AmpsError::Authentication {
                 message: message.clone(),
             },
@@ -176,11 +174,9 @@ impl From<ffi::amps_ffi_error_info_t> for AmpsError {
                     message: message.clone(),
                 }
             }
-            ffi::amps_ffi_error_t_AMPS_FFI_ERROR_PUBLISH_STORE_GAP => {
-                AmpsError::PublishStoreGap {
-                    message: message.clone(),
-                }
-            }
+            ffi::amps_ffi_error_t_AMPS_FFI_ERROR_PUBLISH_STORE_GAP => AmpsError::PublishStoreGap {
+                message: message.clone(),
+            },
             ffi::amps_ffi_error_t_AMPS_FFI_ERROR_TIMEOUT => AmpsError::TimedOut {
                 message: message.clone(),
             },
@@ -199,7 +195,10 @@ impl From<NulError> for AmpsError {
     /// Converts a `NulError` (from `CString::new`) to an `AmpsError`.
     fn from(error: NulError) -> Self {
         AmpsError::NulError {
-            message: format!("String contains null byte at position {}", error.nul_position()),
+            message: format!(
+                "String contains null byte at position {}",
+                error.nul_position()
+            ),
         }
     }
 }
@@ -307,25 +306,61 @@ mod tests {
     fn test_all_error_variants_display() {
         // Ensure all variants implement Display correctly
         let errors = vec![
-            AmpsError::Connection { message: "test".into() },
-            AmpsError::AlreadyConnected { message: "test".into() },
-            AmpsError::Authentication { message: "test".into() },
-            AmpsError::ConnectionRefused { message: "test".into() },
-            AmpsError::Disconnected { message: "test".into() },
-            AmpsError::NameInUse { message: "test".into() },
-            AmpsError::NotEntitled { message: "test".into() },
-            AmpsError::BadFilter { message: "test".into() },
-            AmpsError::BadRegexTopic { message: "test".into() },
-            AmpsError::BadSowKey { message: "test".into() },
-            AmpsError::InvalidTopic { message: "test".into() },
-            AmpsError::Publish { message: "test".into() },
-            AmpsError::SubscriptionExists { message: "test".into() },
-            AmpsError::PublishStoreGap { message: "test".into() },
-            AmpsError::TimedOut { message: "test".into() },
-            AmpsError::Unknown { message: "test".into() },
+            AmpsError::Connection {
+                message: "test".into(),
+            },
+            AmpsError::AlreadyConnected {
+                message: "test".into(),
+            },
+            AmpsError::Authentication {
+                message: "test".into(),
+            },
+            AmpsError::ConnectionRefused {
+                message: "test".into(),
+            },
+            AmpsError::Disconnected {
+                message: "test".into(),
+            },
+            AmpsError::NameInUse {
+                message: "test".into(),
+            },
+            AmpsError::NotEntitled {
+                message: "test".into(),
+            },
+            AmpsError::BadFilter {
+                message: "test".into(),
+            },
+            AmpsError::BadRegexTopic {
+                message: "test".into(),
+            },
+            AmpsError::BadSowKey {
+                message: "test".into(),
+            },
+            AmpsError::InvalidTopic {
+                message: "test".into(),
+            },
+            AmpsError::Publish {
+                message: "test".into(),
+            },
+            AmpsError::SubscriptionExists {
+                message: "test".into(),
+            },
+            AmpsError::PublishStoreGap {
+                message: "test".into(),
+            },
+            AmpsError::TimedOut {
+                message: "test".into(),
+            },
+            AmpsError::Unknown {
+                message: "test".into(),
+            },
             AmpsError::NullPointer,
-            AmpsError::InvalidArgument { message: "test".into() },
-            AmpsError::NulError { message: "test".into() },
+            AmpsError::InvalidArgument {
+                message: "test".into(),
+            },
+            AmpsError::NulError {
+                message: "test".into(),
+            },
         ];
 
         for err in errors {

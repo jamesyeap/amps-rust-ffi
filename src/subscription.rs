@@ -23,7 +23,6 @@
 ///     println!("Received order on topic '{}': {}", msg.topic(), msg.data());
 /// }).unwrap();
 /// ```
-
 use crate::message::Message;
 
 /// A trait for types that can handle AMPS messages.
@@ -95,7 +94,11 @@ impl Subscription {
     /// * `sub_id` - The subscription ID
     /// * `topic` - The topic pattern
     /// * `filter` - Optional filter expression
-    pub fn new(sub_id: impl Into<String>, topic: impl Into<String>, filter: Option<impl Into<String>>) -> Self {
+    pub fn new(
+        sub_id: impl Into<String>,
+        topic: impl Into<String>,
+        filter: Option<impl Into<String>>,
+    ) -> Self {
         Subscription {
             sub_id: sub_id.into(),
             topic: topic.into(),
@@ -201,7 +204,7 @@ mod tests {
         // Test that closures implement MessageHandler
         // This test just verifies that the trait implementation compiles
         fn check_handler<T: MessageHandler>(_handler: T) {}
-        
+
         check_handler(|_msg: &Message| {
             // Handler body
         });
