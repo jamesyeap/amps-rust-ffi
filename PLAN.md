@@ -992,3 +992,77 @@ docker-compose -f tests/docker/docker-compose.yml down
 - [Rust FFI The Rustonomicon](https://doc.rust-lang.org/nomicon/ffi.html)
 - [bindgen User Guide](https://rust-lang.github.io/rust-bindgen/)
 - [The Rust FFI Omnibus](http://jakegoulding.com/rust-ffi-omnibus/)
+
+## 11. Implementation Checklist
+
+### Phase 0: Project Setup
+- [ ] Initialize Rust project with `cargo init --lib`
+- [ ] Set up `Cargo.toml` with dependencies (`libc`, `thiserror`, `log`, `bindgen`, `cc`)
+- [ ] Download and extract AMPS C++ client library into `amps-client/`
+- [ ] Create project directory structure (`c-wrapper/include/`, `c-wrapper/src/`, `src/ffi/`, `tests/docker/`)
+- [ ] Add `.gitignore` entries for build artifacts and `amps-client/`
+
+### Phase 1: C++ Wrapper Layer
+- [ ] Create `c-wrapper/include/amps_ffi.h` with opaque handle types, error codes, error info struct, and function declarations
+- [ ] Implement `CATCH_AMPS_EXCEPTIONS` macro in `c-wrapper/src/amps_ffi.cpp`
+- [ ] Implement client lifecycle functions (`amps_ffi_client_create`, `amps_ffi_client_destroy`)
+- [ ] Implement connection functions (`amps_ffi_client_connect`, `amps_ffi_client_disconnect`, `amps_ffi_client_logon`)
+- [ ] Implement publish functions (`amps_ffi_client_publish`, `amps_ffi_client_delta_publish`)
+- [ ] Implement subscription functions (`amps_ffi_client_subscribe`, `amps_ffi_client_unsubscribe`, `amps_ffi_client_unsubscribe_all`)
+- [ ] Implement SOW functions (`amps_ffi_client_sow`, `amps_ffi_client_sow_and_subscribe`)
+- [ ] Implement message accessor functions (`amps_ffi_message_get_data`, `_get_topic`, `_get_command`, `_get_sow_key`, `_get_bookmark`, `_get_sub_id`, `_get_command_id`)
+- [ ] Implement client configuration functions (`amps_ffi_client_set_disconnect_handler`, `amps_ffi_client_set_heartbeat`)
+- [ ] Implement utility functions (`amps_ffi_error_string`, `amps_ffi_version`)
+- [ ] Create `c-wrapper/CMakeLists.txt` to build the wrapper as a static library
+- [ ] Verify C++ wrapper compiles and links against AMPS client library
+
+### Phase 2: Rust FFI Bindings
+- [ ] Create `build.rs` with bindgen configuration and library linking
+- [ ] Run bindgen and verify auto-generated bindings in `$OUT_DIR/bindings.rs`
+- [ ] Create `src/ffi/mod.rs` (or `src/ffi/bindings.rs`) to include the generated bindings
+- [ ] Verify `cargo build` succeeds with the FFI bindings
+
+### Phase 3: Safe Rust API — Error Handling
+- [ ] Implement `AmpsError` enum in `src/error.rs` with all error variants
+- [ ] Implement `From<amps_ffi_error_info_t>` for `AmpsError`
+- [ ] Implement `From<std::ffi::NulError>` for `AmpsError`
+- [ ] Define `AmpsResult<T>` type alias
+
+### Phase 4: Safe Rust API — Client
+- [ ] Implement `Client` struct wrapping the opaque FFI handle in `src/client.rs`
+- [ ] Implement `Client::new()` (calls `amps_ffi_client_create`)
+- [ ] Implement `Client::connect()` (calls `amps_ffi_client_connect`)
+- [ ] Implement `Client::disconnect()` (calls `amps_ffi_client_disconnect`)
+- [ ] Implement `Client::logon()` (calls `amps_ffi_client_logon`)
+- [ ] Implement `Client::publish()` and `Client::publish_with_expiration()`
+- [ ] Implement `Client::delta_publish()`
+- [ ] Implement `Client::subscribe()` with callback trampoline pattern
+- [ ] Implement `Client::sow()` with callback trampoline pattern
+- [ ] Implement `Client::sow_and_subscribe()` with callback trampoline pattern
+- [ ] Implement `Client::unsubscribe()` and `Client::unsubscribe_all()`
+- [ ] Implement `Client::set_disconnect_handler()`
+- [ ] Implement `Client::set_heartbeat()`
+- [ ] Implement `Drop` for `Client` (calls `amps_ffi_client_destroy`)
+- [ ] Mark `Client` as `Send` (but not `Sync`)
+
+### Phase 5: Safe Rust API — Message & Subscription
+- [ ] Implement `Message` struct in `src/message.rs` with accessor methods (`data`, `topic`, `command`, `sow_key`, `bookmark`, `sub_id`, `command_id`)
+- [ ] Implement `MessageHandler` trait in `src/subscription.rs`
+- [ ] Implement `MessageHandler` for closures (`FnMut(&Message) + Send`)
+- [ ] Implement `Subscription` struct with cleanup logic
+
+### Phase 6: Library Root
+- [ ] Set up `src/lib.rs` with module declarations and public re-exports
+
+### Phase 7: Testing
+- [ ] Create `tests/docker/docker-compose.yml` for AMPS server
+- [ ] Create `tests/docker/amps-config.xml` with test topics (including SOW-enabled topic)
+- [ ] Write unit tests for error conversion (`AmpsError::from`)
+- [ ] Write integration test: connect and publish
+- [ ] Write integration test: subscribe and receive
+- [ ] Write integration test: exception handling (invalid URI)
+- [ ] Verify all tests pass with `cargo test`
+
+### Phase 8: CI/CD
+- [ ] Create `.github/workflows/test.yml` for automated testing
+- [ ] Verify CI pipeline builds C++ wrapper, Rust library, and runs tests
