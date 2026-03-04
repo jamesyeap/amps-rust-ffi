@@ -10,9 +10,17 @@
 //! by bindgen from the C wrapper header file. These bindings are `unsafe` and require
 //! careful handling of pointers and memory.
 //!
-//! A safe, idiomatic Rust API is planned for future development.
+//! # Safe API
+//!
+//! The safe Rust API provides idiomatic Rust types and error handling:
+//! - [`AmpsError`] - Error type for all AMPS operations
+//! - [`AmpsResult`] - Result type alias for AMPS operations
 
+pub mod error;
 pub mod ffi;
+
+// Re-export error types for convenience
+pub use error::{AmpsError, AmpsResult};
 
 #[cfg(test)]
 mod tests {

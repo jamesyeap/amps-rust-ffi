@@ -1058,10 +1058,10 @@ docker-compose -f tests/docker/docker-compose.yml down
 - [x] Verify `cargo build` succeeds with the FFI bindings
 
 ### Phase 3: Safe Rust API — Error Handling
-- [ ] Implement `AmpsError` enum in `src/error.rs` with all error variants
-- [ ] Implement `From<amps_ffi_error_info_t>` for `AmpsError`
-- [ ] Implement `From<std::ffi::NulError>` for `AmpsError`
-- [ ] Define `AmpsResult<T>` type alias
+- [x] Implement `AmpsError` enum in `src/error.rs` with all error variants
+- [x] Implement `From<amps_ffi_error_info_t>` for `AmpsError`
+- [x] Implement `From<std::ffi::NulError>` for `AmpsError`
+- [x] Define `AmpsResult<T>` type alias
 
 ### Phase 4: Safe Rust API — Client
 - [ ] Implement `Client` struct wrapping the opaque FFI handle in `src/client.rs`
