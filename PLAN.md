@@ -1007,7 +1007,17 @@ docker-compose -f tests/docker/docker-compose.yml down
 
 4. **bindgen parses the header successfully**: A test verifies that all 20+ function declarations, enum values, and struct types are present in the generated Rust bindings.
 
-5. **C++ compilation blocked**: The `.cpp` file cannot be compiled until the proprietary AMPS client library is downloaded into `amps-client/`. The checklist item remains unchecked.
+5. **AMPS header include path**: The AMPS headers internally use `#include "amps/amps.h"`, so the include path must be `amps-client/include` (not `amps-client/include/amps`), and the wrapper must `#include <amps/ampsplusplus.hpp>`.
+
+6. **Type name collision**: AMPS defines its own `amps_client_t` and `amps_message_t` structs in `amps_impl.h`. Our FFI handles were renamed to `amps_ffi_client_t`, `amps_ffi_message_t`, and `amps_ffi_command_t` to avoid the collision. Callback typedefs were similarly prefixed.
+
+7. **`TimedOutException` derives from `ConnectionException`**: The original plan's exception hierarchy listed it under the root `AMPSException`, but the actual AMPS source (`util.hpp`) defines `AMPS_EX_TYPE(TimedOutException, ConnectionException)`. The catch must appear before `ConnectionException`.
+
+8. **`logon()` API signature**: The correct overloads are `logon(timeout)` and `logon(options, timeout)`. The plan's `Authenticator` parameter is abstract and cannot be instantiated.
+
+9. **`setDisconnectHandler` is deprecated**: The AMPS 5.3.5.1 API marks it with `[[deprecated]]`. The wrapper uses `#pragma GCC diagnostic` to suppress the warning. A `DisconnectContext` struct + static trampoline function is used instead of a lambda to work without `AMPS_USE_FUNCTIONAL`.
+
+10. **`publish()` requires topic length**: The 4-arg overload `publish(topic, data, data_len, expiration)` doesn't exist. The correct overload is `publish(topic, topic_len, data, data_len, expiration)` (5 args).
 
 ## 11. References
 
@@ -1038,7 +1048,7 @@ docker-compose -f tests/docker/docker-compose.yml down
 - [x] Implement client configuration functions (`amps_ffi_client_set_disconnect_handler`, `amps_ffi_client_set_heartbeat`)
 - [x] Implement utility functions (`amps_ffi_error_string`, `amps_ffi_version`)
 - [x] Create `c-wrapper/CMakeLists.txt` to build the wrapper as a static library
-- [ ] Verify C++ wrapper compiles and links against AMPS client library (blocked: requires AMPS client in `amps-client/`)
+- [x] Verify C++ wrapper compiles and links against AMPS client library
 
 ### Phase 2: Rust FFI Bindings
 - [ ] Create `build.rs` with bindgen configuration and library linking

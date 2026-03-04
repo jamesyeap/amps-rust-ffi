@@ -1,5 +1,5 @@
 #include "amps_ffi.h"
-#include <ampsplusplus.hpp>
+#include <amps/ampsplusplus.hpp>
 #include <cstring>
 #include <string>
 
@@ -16,14 +16,33 @@ static void set_error(amps_ffi_error_info_t* error, amps_ffi_error_t code, const
 
 /* ── Helper macro to catch AMPS exceptions and populate error info ──
  *
- *  More-specific exception types must be caught before their base classes.
- *  AlreadyConnectedException derives from ConnectionException, so it
- *  comes first in the catch chain.
+ *  Catch order follows the actual AMPS hierarchy (util.hpp):
+ *    AMPSException
+ *    ├── ConnectionException
+ *    │   ├── AlreadyConnectedException
+ *    │   ├── AuthenticationException
+ *    │   ├── ConnectionRefusedException
+ *    │   ├── DisconnectedException
+ *    │   ├── NameInUseException
+ *    │   ├── NotEntitledException
+ *    │   └── TimedOutException          ← derives from ConnectionException!
+ *    ├── CommandException
+ *    │   ├── BadFilterException
+ *    │   ├── BadRegexTopicException
+ *    │   ├── BadSowKeyException
+ *    │   ├── InvalidTopicException
+ *    │   ├── PublishException
+ *    │   └── SubscriptionAlreadyExistsException
+ *    └── StoreException
+ *        └── PublishStoreGapException
+ *
+ *  Derived types MUST appear before their base class.
  */
 #define CATCH_AMPS_EXCEPTIONS(block) \
     try { \
         block; \
         return AMPS_FFI_OK; \
+    /* ── ConnectionException subtypes ── */ \
     } catch (const AMPS::AlreadyConnectedException& e) { \
         set_error(error, AMPS_FFI_ERROR_ALREADY_CONNECTED, e.what()); \
         return AMPS_FFI_ERROR_ALREADY_CONNECTED; \
@@ -42,9 +61,14 @@ static void set_error(amps_ffi_error_info_t* error, amps_ffi_error_t code, const
     } catch (const AMPS::NotEntitledException& e) { \
         set_error(error, AMPS_FFI_ERROR_NOT_ENTITLED, e.what()); \
         return AMPS_FFI_ERROR_NOT_ENTITLED; \
+    } catch (const AMPS::TimedOutException& e) { \
+        set_error(error, AMPS_FFI_ERROR_TIMEOUT, e.what()); \
+        return AMPS_FFI_ERROR_TIMEOUT; \
+    /* ── ConnectionException base ── */ \
     } catch (const AMPS::ConnectionException& e) { \
         set_error(error, AMPS_FFI_ERROR_CONNECTION, e.what()); \
         return AMPS_FFI_ERROR_CONNECTION; \
+    /* ── CommandException subtypes ── */ \
     } catch (const AMPS::BadFilterException& e) { \
         set_error(error, AMPS_FFI_ERROR_BAD_FILTER, e.what()); \
         return AMPS_FFI_ERROR_BAD_FILTER; \
@@ -63,12 +87,12 @@ static void set_error(amps_ffi_error_info_t* error, amps_ffi_error_t code, const
     } catch (const AMPS::SubscriptionAlreadyExistsException& e) { \
         set_error(error, AMPS_FFI_ERROR_SUBSCRIPTION_EXISTS, e.what()); \
         return AMPS_FFI_ERROR_SUBSCRIPTION_EXISTS; \
+    /* ── CommandException base (not mapped to a specific code) ── */ \
+    /* ── StoreException subtypes ── */ \
     } catch (const AMPS::PublishStoreGapException& e) { \
         set_error(error, AMPS_FFI_ERROR_PUBLISH_STORE_GAP, e.what()); \
         return AMPS_FFI_ERROR_PUBLISH_STORE_GAP; \
-    } catch (const AMPS::TimedOutException& e) { \
-        set_error(error, AMPS_FFI_ERROR_TIMEOUT, e.what()); \
-        return AMPS_FFI_ERROR_TIMEOUT; \
+    /* ── AMPSException base ── */ \
     } catch (const AMPS::AMPSException& e) { \
         set_error(error, AMPS_FFI_ERROR_UNKNOWN, e.what()); \
         return AMPS_FFI_ERROR_UNKNOWN; \
@@ -94,7 +118,7 @@ static void set_error(amps_ffi_error_info_t* error, amps_ffi_error_t code, const
 
 /* ── Subscription callback context ── */
 struct CallbackContext {
-    amps_message_handler_t handler;
+    amps_ffi_message_handler_t handler;
     void* user_data;
 };
 
@@ -104,10 +128,10 @@ extern "C" {
  *  Client lifecycle
  * ═══════════════════════════════════════════════════════════════════════ */
 
-amps_client_t amps_ffi_client_create(const char* client_name, amps_ffi_error_info_t* error) {
+amps_ffi_client_t amps_ffi_client_create(const char* client_name, amps_ffi_error_info_t* error) {
     try {
         AMPS::Client* client = new AMPS::Client(client_name ? client_name : "");
-        return reinterpret_cast<amps_client_t>(client);
+        return reinterpret_cast<amps_ffi_client_t>(client);
     } catch (const std::exception& e) {
         set_error(error, AMPS_FFI_ERROR_UNKNOWN, e.what());
         return nullptr;
@@ -117,7 +141,7 @@ amps_client_t amps_ffi_client_create(const char* client_name, amps_ffi_error_inf
     }
 }
 
-void amps_ffi_client_destroy(amps_client_t client) {
+void amps_ffi_client_destroy(amps_ffi_client_t client) {
     if (client) {
         delete reinterpret_cast<AMPS::Client*>(client);
     }
@@ -127,7 +151,7 @@ void amps_ffi_client_destroy(amps_client_t client) {
  *  Connection
  * ═══════════════════════════════════════════════════════════════════════ */
 
-int amps_ffi_client_connect(amps_client_t client, const char* uri, amps_ffi_error_info_t* error) {
+int amps_ffi_client_connect(amps_ffi_client_t client, const char* uri, amps_ffi_error_info_t* error) {
     NULL_GUARD(client, uri);
     AMPS::Client* cpp_client = reinterpret_cast<AMPS::Client*>(client);
     CATCH_AMPS_EXCEPTIONS(
@@ -135,7 +159,7 @@ int amps_ffi_client_connect(amps_client_t client, const char* uri, amps_ffi_erro
     );
 }
 
-int amps_ffi_client_disconnect(amps_client_t client, amps_ffi_error_info_t* error) {
+int amps_ffi_client_disconnect(amps_ffi_client_t client, amps_ffi_error_info_t* error) {
     NULL_GUARD(client);
     AMPS::Client* cpp_client = reinterpret_cast<AMPS::Client*>(client);
     CATCH_AMPS_EXCEPTIONS(
@@ -143,12 +167,12 @@ int amps_ffi_client_disconnect(amps_client_t client, amps_ffi_error_info_t* erro
     );
 }
 
-int amps_ffi_client_logon(amps_client_t client, const char* options, int timeout_ms, amps_ffi_error_info_t* error) {
+int amps_ffi_client_logon(amps_ffi_client_t client, const char* options, int timeout_ms, amps_ffi_error_info_t* error) {
     NULL_GUARD(client);
     AMPS::Client* cpp_client = reinterpret_cast<AMPS::Client*>(client);
     CATCH_AMPS_EXCEPTIONS(
         if (options) {
-            cpp_client->logon(timeout_ms, AMPS::Authenticator(), options);
+            cpp_client->logon(options, timeout_ms);
         } else {
             cpp_client->logon(timeout_ms);
         }
@@ -159,7 +183,7 @@ int amps_ffi_client_logon(amps_client_t client, const char* options, int timeout
  *  Publishing
  * ═══════════════════════════════════════════════════════════════════════ */
 
-uint64_t amps_ffi_client_publish(amps_client_t client,
+uint64_t amps_ffi_client_publish(amps_ffi_client_t client,
                                   const char* topic,
                                   const char* data,
                                   size_t data_len,
@@ -171,7 +195,7 @@ uint64_t amps_ffi_client_publish(amps_client_t client,
     }
     AMPS::Client* cpp_client = reinterpret_cast<AMPS::Client*>(client);
     try {
-        cpp_client->publish(topic, data, data_len, expiration);
+        cpp_client->publish(topic, strlen(topic), data, data_len, expiration);
         return 1; /* success – AMPS publish does not return a sequence number directly */
     } catch (const AMPS::AMPSException& e) {
         set_error(error, AMPS_FFI_ERROR_PUBLISH, e.what());
@@ -185,7 +209,7 @@ uint64_t amps_ffi_client_publish(amps_client_t client,
     }
 }
 
-uint64_t amps_ffi_client_delta_publish(amps_client_t client,
+uint64_t amps_ffi_client_delta_publish(amps_ffi_client_t client,
                                         const char* topic,
                                         const char* data,
                                         size_t data_len,
@@ -217,27 +241,23 @@ uint64_t amps_ffi_client_delta_publish(amps_client_t client,
 static void subscription_trampoline(const AMPS::Message& msg, void* user_data) {
     CallbackContext* ctx = static_cast<CallbackContext*>(user_data);
     if (ctx && ctx->handler) {
-        /* Cast away const – the FFI handle is opaque; the Rust side only
-         * reads through amps_ffi_message_get_* which take const-equivalent
-         * pointers internally. */
-        amps_message_t handle = reinterpret_cast<amps_message_t>(
+        amps_ffi_message_t handle = reinterpret_cast<amps_ffi_message_t>(
             const_cast<AMPS::Message*>(&msg));
         ctx->handler(handle, ctx->user_data);
     }
 }
 
-int amps_ffi_client_subscribe(amps_client_t client,
+int amps_ffi_client_subscribe(amps_ffi_client_t client,
                                const char* topic,
                                const char* filter,
                                const char* options,
                                int timeout_ms,
-                               amps_message_handler_t handler,
+                               amps_ffi_message_handler_t handler,
                                void* user_data,
                                amps_ffi_error_info_t* error) {
     NULL_GUARD(client, topic);
     AMPS::Client* cpp_client = reinterpret_cast<AMPS::Client*>(client);
 
-    /* Heap-allocate so the context outlives this call. */
     CallbackContext* ctx = new CallbackContext{ handler, user_data };
 
     CATCH_AMPS_EXCEPTIONS(
@@ -248,11 +268,11 @@ int amps_ffi_client_subscribe(amps_client_t client,
         if (timeout_ms > 0) cmd.setTimeout(timeout_ms);
         cpp_client->executeAsync(cmd, [ctx](const AMPS::Message& m) {
             subscription_trampoline(m, ctx);
-        });
+        })
     );
 }
 
-int amps_ffi_client_unsubscribe(amps_client_t client, const char* sub_id, amps_ffi_error_info_t* error) {
+int amps_ffi_client_unsubscribe(amps_ffi_client_t client, const char* sub_id, amps_ffi_error_info_t* error) {
     NULL_GUARD(client, sub_id);
     AMPS::Client* cpp_client = reinterpret_cast<AMPS::Client*>(client);
     CATCH_AMPS_EXCEPTIONS(
@@ -260,7 +280,7 @@ int amps_ffi_client_unsubscribe(amps_client_t client, const char* sub_id, amps_f
     );
 }
 
-int amps_ffi_client_unsubscribe_all(amps_client_t client, amps_ffi_error_info_t* error) {
+int amps_ffi_client_unsubscribe_all(amps_ffi_client_t client, amps_ffi_error_info_t* error) {
     NULL_GUARD(client);
     AMPS::Client* cpp_client = reinterpret_cast<AMPS::Client*>(client);
     CATCH_AMPS_EXCEPTIONS(
@@ -272,14 +292,14 @@ int amps_ffi_client_unsubscribe_all(amps_client_t client, amps_ffi_error_info_t*
  *  SOW
  * ═══════════════════════════════════════════════════════════════════════ */
 
-int amps_ffi_client_sow(amps_client_t client,
+int amps_ffi_client_sow(amps_ffi_client_t client,
                          const char* topic,
                          const char* filter,
                          const char* order_by,
                          int batch_size,
                          int top_n,
                          int timeout_ms,
-                         amps_message_handler_t handler,
+                         amps_ffi_message_handler_t handler,
                          void* user_data,
                          amps_ffi_error_info_t* error) {
     NULL_GUARD(client, topic);
@@ -297,16 +317,16 @@ int amps_ffi_client_sow(amps_client_t client,
         if (timeout_ms > 0) cmd.setTimeout(timeout_ms);
         cpp_client->executeAsync(cmd, [ctx](const AMPS::Message& m) {
             subscription_trampoline(m, ctx);
-        });
+        })
     );
 }
 
-int amps_ffi_client_sow_and_subscribe(amps_client_t client,
+int amps_ffi_client_sow_and_subscribe(amps_ffi_client_t client,
                                        const char* topic,
                                        const char* filter,
                                        const char* options,
                                        int timeout_ms,
-                                       amps_message_handler_t handler,
+                                       amps_ffi_message_handler_t handler,
                                        void* user_data,
                                        amps_ffi_error_info_t* error) {
     NULL_GUARD(client, topic);
@@ -322,7 +342,7 @@ int amps_ffi_client_sow_and_subscribe(amps_client_t client,
         if (timeout_ms > 0) cmd.setTimeout(timeout_ms);
         cpp_client->executeAsync(cmd, [ctx](const AMPS::Message& m) {
             subscription_trampoline(m, ctx);
-        });
+        })
     );
 }
 
@@ -330,7 +350,7 @@ int amps_ffi_client_sow_and_subscribe(amps_client_t client,
  *  Message access
  * ═══════════════════════════════════════════════════════════════════════ */
 
-const char* amps_ffi_message_get_data(amps_message_t message, size_t* len) {
+const char* amps_ffi_message_get_data(amps_ffi_message_t message, size_t* len) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
     const char* data = msg->getData().data();
@@ -338,37 +358,37 @@ const char* amps_ffi_message_get_data(amps_message_t message, size_t* len) {
     return data;
 }
 
-const char* amps_ffi_message_get_topic(amps_message_t message) {
+const char* amps_ffi_message_get_topic(amps_ffi_message_t message) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
     return msg->getTopic().data();
 }
 
-const char* amps_ffi_message_get_command(amps_message_t message) {
+const char* amps_ffi_message_get_command(amps_ffi_message_t message) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
     return msg->getCommand().data();
 }
 
-const char* amps_ffi_message_get_sow_key(amps_message_t message) {
+const char* amps_ffi_message_get_sow_key(amps_ffi_message_t message) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
     return msg->getSowKey().data();
 }
 
-const char* amps_ffi_message_get_bookmark(amps_message_t message) {
+const char* amps_ffi_message_get_bookmark(amps_ffi_message_t message) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
     return msg->getBookmark().data();
 }
 
-const char* amps_ffi_message_get_sub_id(amps_message_t message) {
+const char* amps_ffi_message_get_sub_id(amps_ffi_message_t message) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
     return msg->getSubId().data();
 }
 
-const char* amps_ffi_message_get_command_id(amps_message_t message) {
+const char* amps_ffi_message_get_command_id(amps_ffi_message_t message) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
     return msg->getCommandId().data();
@@ -378,24 +398,53 @@ const char* amps_ffi_message_get_command_id(amps_message_t message) {
  *  Client configuration
  * ═══════════════════════════════════════════════════════════════════════ */
 
-int amps_ffi_client_set_disconnect_handler(amps_client_t client,
-                                            amps_disconnect_handler_t handler,
+/* Context for disconnect handler trampoline */
+struct DisconnectContext {
+    amps_ffi_disconnect_handler_t handler;
+    void* user_data;
+};
+
+static void disconnect_trampoline(AMPS::Client& c, void* user_data) {
+    DisconnectContext* ctx = static_cast<DisconnectContext*>(user_data);
+    if (ctx && ctx->handler) {
+        ctx->handler(reinterpret_cast<amps_ffi_client_t>(&c), ctx->user_data);
+    }
+}
+
+int amps_ffi_client_set_disconnect_handler(amps_ffi_client_t client,
+                                            amps_ffi_disconnect_handler_t handler,
                                             void* user_data,
                                             amps_ffi_error_info_t* error) {
     NULL_GUARD(client);
     AMPS::Client* cpp_client = reinterpret_cast<AMPS::Client*>(client);
-    CATCH_AMPS_EXCEPTIONS(
+
+    /* Heap-allocate context so it outlives this call */
+    DisconnectContext* ctx = new DisconnectContext{ handler, user_data };
+
+    try {
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
         cpp_client->setDisconnectHandler(
-            [handler, user_data](AMPS::Client& c) {
-                if (handler) {
-                    handler(reinterpret_cast<amps_client_t>(&c), user_data);
-                }
-                return AMPS::DisconnectHandler::DisconnectAction::DoNotRetry;
-            })
-    );
+            AMPS::DisconnectHandler(disconnect_trampoline, ctx));
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+        return AMPS_FFI_OK;
+    } catch (const AMPS::AMPSException& e) {
+        set_error(error, AMPS_FFI_ERROR_UNKNOWN, e.what());
+        return AMPS_FFI_ERROR_UNKNOWN;
+    } catch (const std::exception& e) {
+        set_error(error, AMPS_FFI_ERROR_UNKNOWN, e.what());
+        return AMPS_FFI_ERROR_UNKNOWN;
+    } catch (...) {
+        set_error(error, AMPS_FFI_ERROR_UNKNOWN, "Unknown exception");
+        return AMPS_FFI_ERROR_UNKNOWN;
+    }
 }
 
-int amps_ffi_client_set_heartbeat(amps_client_t client, unsigned heartbeat_time_sec, unsigned read_timeout_sec) {
+int amps_ffi_client_set_heartbeat(amps_ffi_client_t client, unsigned heartbeat_time_sec, unsigned read_timeout_sec) {
     if (!client) return AMPS_FFI_ERROR_NULL_POINTER;
     AMPS::Client* cpp_client = reinterpret_cast<AMPS::Client*>(client);
     try {
@@ -412,7 +461,7 @@ int amps_ffi_client_set_heartbeat(amps_client_t client, unsigned heartbeat_time_
 
 const char* amps_ffi_error_string(amps_ffi_error_t error_code) {
     switch (error_code) {
-        case AMPS_FFI_OK:                     return "OK";
+        case AMPS_FFI_OK:                      return "OK";
         case AMPS_FFI_ERROR_CONNECTION:        return "Connection error";
         case AMPS_FFI_ERROR_ALREADY_CONNECTED: return "Already connected";
         case AMPS_FFI_ERROR_AUTHENTICATION:    return "Authentication failed";

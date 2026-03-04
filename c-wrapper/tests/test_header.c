@@ -24,18 +24,17 @@ int main(void) {
     assert(sizeof(err.message) == 1024);
 
     /* Opaque handles are pointer-sized */
-    assert(sizeof(amps_client_t) == sizeof(void*));
-    assert(sizeof(amps_message_t) == sizeof(void*));
-    assert(sizeof(amps_command_t) == sizeof(void*));
+    assert(sizeof(amps_ffi_client_t) == sizeof(void*));
+    assert(sizeof(amps_ffi_message_t) == sizeof(void*));
+    assert(sizeof(amps_ffi_command_t) == sizeof(void*));
 
     /* Callback typedefs are function pointers (can be set to NULL) */
-    amps_message_handler_t msg_handler = NULL;
-    amps_disconnect_handler_t dc_handler = NULL;
+    amps_ffi_message_handler_t msg_handler = NULL;
+    amps_ffi_disconnect_handler_t dc_handler = NULL;
     (void)msg_handler;
     (void)dc_handler;
 
-    /* Function pointers are resolvable (link-time – here we just take addresses).
-     * We cast to void* to avoid unused-variable warnings. */
+    /* Function pointers are resolvable (link-time – here we just take addresses). */
     (void)(amps_ffi_error_string);
     (void)(amps_ffi_version);
 

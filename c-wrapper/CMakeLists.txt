@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Path to the AMPS C++ client headers
-set(AMPS_CLIENT_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../amps-client/include"
+set(AMPS_CLIENT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../amps-client/include"
     CACHE PATH "Path to AMPS C++ client include directory")
 
 # Path to the AMPS C++ client library
