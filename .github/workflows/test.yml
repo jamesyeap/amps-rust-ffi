@@ -1,0 +1,108 @@
+name: Test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      amps-server:
+        image: 60east/amps:latest
+        ports:
+          - 9007:9007
+          - 9008:9008
+        volumes:
+          - ${{ github.workspace }}/tests/docker/amps-config.xml:/etc/amps/config.xml:ro
+        options: >
+          --health-cmd "amps_check --port 9007"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+          --health-start-period 5s
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libssl-dev zlib1g-dev
+
+      - name: Build C++ wrapper
+        run: |
+          mkdir -p c-wrapper/build
+          cd c-wrapper/build
+          cmake ..
+          make -j$(nproc)
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Rust library
+        run: cargo build --verbose
+
+      - name: Run tests
+        run: cargo test --verbose -- --nocapture
+        env:
+          AMPS_TEST_URI: tcp://localhost:9007/amps/json
+        # Note: Tests will gracefully skip if AMPS server is unavailable
+        # due to the `skip_if_no_amps!` macro in integration_tests.rs
+
+      - name: Run clippy (linting)
+        run: cargo clippy -- -D warnings
+        if: always()
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+        if: always()
+
+  # Separate job for macOS (no AMPS server service available)
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          brew install cmake
+
+      - name: Build C++ wrapper
+        run: |
+          mkdir -p c-wrapper/build
+          cd c-wrapper/build
+          cmake ..
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Rust library
+        run: cargo build --verbose
+
+      - name: Run unit tests (no AMPS server)
+        run: cargo test --lib --verbose -- --nocapture
+
+      - name: Run clippy (linting)
+        run: cargo clippy -- -D warnings
+        if: always()
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+        if: always()

@@ -1128,5 +1128,5 @@ docker-compose -f tests/docker/docker-compose.yml down
 - [x] Verify all tests pass with `cargo test`
 
 ### Phase 8: CI/CD
-- [ ] Create `.github/workflows/test.yml` for automated testing
-- [ ] Verify CI pipeline builds C++ wrapper, Rust library, and runs tests
+- [x] Create `.github/workflows/test.yml` for automated testing
+- [x] Verify CI pipeline builds C++ wrapper, Rust library, and runs tests
