@@ -1048,7 +1048,113 @@ docker-compose -f tests/docker/docker-compose.yml down
 
 14. **Test isolation**: Each test creates uniquely named clients to avoid name collisions. Tests use `std::thread::sleep()` for timing synchronization since AMPS operations are asynchronous.
 
-## 11. References
+## 11. Known Issues and Bugs
+
+### 11.1 Memory Safety Bug: String Lifetime in Message Accessors
+
+**Status**: 🔴 Critical - Needs Fix
+
+**Location**: `c-wrapper/src/amps_ffi.cpp`
+
+**Affected Functions**:
+- `amps_ffi_message_get_topic()`
+- `amps_ffi_message_get_command()`
+- `amps_ffi_message_get_sow_key()`
+- `amps_ffi_message_get_bookmark()`
+- `amps_ffi_message_get_sub_id()`
+- `amps_ffi_message_get_command_id()`
+
+**Problem**: The C++ wrapper returns pointers to temporary string data that becomes invalid after the function returns:
+
+```cpp
+// BUGGY CODE - Returns dangling pointer
+const char* amps_ffi_message_get_topic(amps_ffi_message_t message) {
+    if (!message) return nullptr;
+    const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
+    return msg->getTopic().data();  // getTopic() returns std::string by value,
+                                    // .data() becomes dangling after return
+}
+```
+
+**Impact**: 
+- `test_message_properties` fails with corrupted topic strings
+- Potential undefined behavior when accessing message properties
+- Memory reads from freed heap memory
+
+**Test Failure**:
+```
+assertion `left == right` failed: Topic mismatch
+  left: "test-topic\",\"sids\":\"auto6\",\"l\":32}{\"id\": \"msg-test\", \"value\": 123}...
+ right: "test-topic"
+```
+
+**Solution**: Copy string data into a thread-local buffer or allocate memory that the caller must free:
+
+```cpp
+// PROPOSED FIX - Use thread-local buffer
+const char* amps_ffi_message_get_topic(amps_ffi_message_t message) {
+    if (!message) return nullptr;
+    const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
+    static thread_local std::string buffer;  // Thread-local storage
+    buffer = msg->getTopic();  // Copy to buffer
+    return buffer.c_str();     // Return stable pointer
+}
+```
+
+### 11.2 Test Failures Requiring Investigation
+
+| Test | Status | Issue |
+|------|--------|-------|
+| `test_connect_and_publish` | 🔴 Failed | Sequence numbers not monotonically increasing (seq2 <= seq) |
+| `test_message_properties` | 🔴 Failed | String lifetime bug in FFI layer (see 11.1) |
+| `test_sow_query_with_filter` | 🔴 Failed | JSON parse error - SOW query returns empty/invalid data |
+
+**Passing Tests (13/16)**:
+- `test_client_send_trait`
+- `test_connection_to_different_uris`
+- `test_delta_publish`
+- `test_exception_handling_already_connected`
+- `test_exception_handling_invalid_uri`
+- `test_exception_handling_not_connected`
+- `test_multiple_clients`
+- `test_set_heartbeat`
+- `test_sow_and_subscribe`
+- `test_sow_query`
+- `test_subscribe_and_receive`
+- `test_subscribe_with_filter`
+- `test_unsubscribe`
+
+### 11.3 SOW Query Returns Empty Messages
+
+**Status**: 🟡 Needs Investigation
+
+The `test_sow_query_with_filter` test fails with:
+```
+called `Result::unwrap()` on an `Err` value: 
+  Error("EOF while parsing a value", line: 1, column: 0)
+```
+
+This suggests the SOW query handler receives messages with empty data. Possible causes:
+1. SOW query confirmation messages (with no data) being passed to handler
+2. Filter not matching any records
+3. Race condition between publish and query
+
+### 11.4 Sequence Number Behavior
+
+**Status**: 🟡 Needs Investigation
+
+The `test_connect_and_publish` test expects sequence numbers to increase monotonically:
+
+```rust
+assert!(seq2 > seq, "Expected sequence number to increase");
+```
+
+This assertion fails, indicating either:
+1. AMPS returns non-monotonic sequence numbers for the same topic
+2. Different topics have independent sequence number spaces
+3. Test needs adjustment based on actual AMPS behavior
+
+## 13. References
 
 - [AMPS C++ Developer Guide](https://devnull.crankuptheamps.com/documentation/html/5.2.0.0/dev-guides/cpp/html/)
 - [AMPS C/C++ API Reference](https://devnull.crankuptheamps.com/documentation/api/cpp/5.3.5.1/)
@@ -1056,7 +1162,7 @@ docker-compose -f tests/docker/docker-compose.yml down
 - [bindgen User Guide](https://rust-lang.github.io/rust-bindgen/)
 - [The Rust FFI Omnibus](http://jakegoulding.com/rust-ffi-omnibus/)
 
-## 12. Implementation Checklist
+## 14. Implementation Checklist
 
 ### Phase 0: Project Setup
 - [x] Initialize Rust project with `cargo init --lib`
