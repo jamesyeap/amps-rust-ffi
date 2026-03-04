@@ -3,6 +3,8 @@
 > **When told to "start", do the following:**
 >
 > Read this entire PLAN.md, then complete the **next incomplete phase** in the Implementation Checklist (Section 11). ALWAYS write tests, and ensure that all testcases are passing before marking any task as done. If you encounter any bug, try to fix it, and then write test cases to ensure that it is fixed (always run the testcases and ensure that they are passing). Document any interesting findings in a relevant section in PLAN.md.
+>
+> **Once all testcases are passing and the phase is complete**, create a git commit using **Conventional Commits** format (e.g. `feat: add C++ wrapper layer`, `fix: handle null pointer in client_create`, `test: add integration tests for publish/subscribe`). Only stage files relevant to the completed phase — never use `git add -A` or `git add .`.
 
 ---
 

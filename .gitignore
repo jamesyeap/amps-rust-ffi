@@ -1,1 +1,22 @@
-/target
+# Rust build artifacts
+/target/
+
+# AMPS C++ client library (downloaded dependency)
+/amps-client/
+
+# C++ wrapper build artifacts
+/c-wrapper/build/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
