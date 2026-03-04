@@ -25,12 +25,21 @@ fn main() {
     // Link to C++ wrapper library
     println!("cargo:rustc-link-lib=static=amps_ffi");
 
+    // Get target for platform-specific linking
+    let target = env::var("TARGET").unwrap();
+
     // Link system libraries required by AMPS
     println!("cargo:rustc-link-lib=pthread");
+    
+    // Link system zlib - AMPS uses dynamic loading but we need to link it for the symbols
     println!("cargo:rustc-link-lib=z");
+    
+    // Link dynamic loader for amps_zlib.c (dlopen/dlsym)
+    if target.contains("linux") || target.contains("apple") {
+        println!("cargo:rustc-link-lib=dl");
+    }
 
     // Link C++ standard library based on target
-    let target = env::var("TARGET").unwrap();
     if target.contains("apple") {
         println!("cargo:rustc-link-lib=c++");
     } else if target.contains("linux") {

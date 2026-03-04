@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
-project(amps_ffi LANGUAGES CXX)
+project(amps_ffi LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Path to the AMPS C++ client headers
@@ -15,6 +17,7 @@ set(AMPS_CLIENT_LIB_DIR "${CMAKE_SOURCE_DIR}/../amps-client/lib"
 
 add_library(amps_ffi STATIC
     src/amps_ffi.cpp
+    src/zlib_shim.c
 )
 
 target_include_directories(amps_ffi PUBLIC
