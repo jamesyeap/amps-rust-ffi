@@ -2,7 +2,7 @@
 
 > **When told to "start", do the following:**
 >
-> Read this entire PLAN.md, then complete the **next incomplete phase** in the Implementation Checklist (Section 11). ALWAYS write tests, and ensure that all testcases are passing before marking any task as done. If you encounter any bug, try to fix it, and then write test cases to ensure that it is fixed (always run the testcases and ensure that they are passing). Document any interesting findings in a relevant section in PLAN.md.
+> Read this entire PLAN.md, then complete the **next incomplete phase** in the Implementation Checklist (Section 12). ALWAYS write tests, and ensure that all testcases are passing before marking any task as done. If you encounter any bug, try to fix it, and then write test cases to ensure that it is fixed (always run the testcases and ensure that they are passing). Document any interesting findings in a relevant section in PLAN.md.
 >
 > **Once all testcases are passing and the phase is complete**, create a git commit using **Conventional Commits** format (e.g. `feat: add C++ wrapper layer`, `fix: handle null pointer in client_create`, `test: add integration tests for publish/subscribe`). Only stage files relevant to the completed phase — never use `git add -A` or `git add .`.
 
@@ -995,7 +995,21 @@ docker-compose -f tests/docker/docker-compose.yml down
 - Transport filters
 - Performance metrics
 
-## 10. References
+## 10. Implementation Findings
+
+### Phase 1 Findings
+
+1. **CATCH_AMPS_EXCEPTIONS catch order matters**: `AlreadyConnectedException` derives from `ConnectionException`, so it must be caught first. The original plan's macro only had two AMPS catch clauses; the full implementation catches all 14 specific exception types in the correct hierarchy order before the base `AMPSException`.
+
+2. **Disconnect handler return type**: The AMPS `setDisconnectHandler` lambda must return a `DisconnectHandler::DisconnectAction`. The current implementation defaults to `DoNotRetry` — a future enhancement could expose this choice to the Rust side.
+
+3. **Header C/C++ compatibility verified**: `amps_ffi.h` compiles cleanly with both `cc -std=c11` and `c++ -std=c++14` with `-Wall -Wextra -Werror`. The `extern "C"` guards work correctly.
+
+4. **bindgen parses the header successfully**: A test verifies that all 20+ function declarations, enum values, and struct types are present in the generated Rust bindings.
+
+5. **C++ compilation blocked**: The `.cpp` file cannot be compiled until the proprietary AMPS client library is downloaded into `amps-client/`. The checklist item remains unchecked.
+
+## 11. References
 
 - [AMPS C++ Developer Guide](https://devnull.crankuptheamps.com/documentation/html/5.2.0.0/dev-guides/cpp/html/)
 - [AMPS C/C++ API Reference](https://devnull.crankuptheamps.com/documentation/api/cpp/5.3.5.1/)
@@ -1003,7 +1017,7 @@ docker-compose -f tests/docker/docker-compose.yml down
 - [bindgen User Guide](https://rust-lang.github.io/rust-bindgen/)
 - [The Rust FFI Omnibus](http://jakegoulding.com/rust-ffi-omnibus/)
 
-## 11. Implementation Checklist
+## 12. Implementation Checklist
 
 ### Phase 0: Project Setup
 - [x] Initialize Rust project with `cargo init --lib`
@@ -1013,18 +1027,18 @@ docker-compose -f tests/docker/docker-compose.yml down
 - [x] Add `.gitignore` entries for build artifacts and `amps-client/`
 
 ### Phase 1: C++ Wrapper Layer
-- [ ] Create `c-wrapper/include/amps_ffi.h` with opaque handle types, error codes, error info struct, and function declarations
-- [ ] Implement `CATCH_AMPS_EXCEPTIONS` macro in `c-wrapper/src/amps_ffi.cpp`
-- [ ] Implement client lifecycle functions (`amps_ffi_client_create`, `amps_ffi_client_destroy`)
-- [ ] Implement connection functions (`amps_ffi_client_connect`, `amps_ffi_client_disconnect`, `amps_ffi_client_logon`)
-- [ ] Implement publish functions (`amps_ffi_client_publish`, `amps_ffi_client_delta_publish`)
-- [ ] Implement subscription functions (`amps_ffi_client_subscribe`, `amps_ffi_client_unsubscribe`, `amps_ffi_client_unsubscribe_all`)
-- [ ] Implement SOW functions (`amps_ffi_client_sow`, `amps_ffi_client_sow_and_subscribe`)
-- [ ] Implement message accessor functions (`amps_ffi_message_get_data`, `_get_topic`, `_get_command`, `_get_sow_key`, `_get_bookmark`, `_get_sub_id`, `_get_command_id`)
-- [ ] Implement client configuration functions (`amps_ffi_client_set_disconnect_handler`, `amps_ffi_client_set_heartbeat`)
-- [ ] Implement utility functions (`amps_ffi_error_string`, `amps_ffi_version`)
-- [ ] Create `c-wrapper/CMakeLists.txt` to build the wrapper as a static library
-- [ ] Verify C++ wrapper compiles and links against AMPS client library
+- [x] Create `c-wrapper/include/amps_ffi.h` with opaque handle types, error codes, error info struct, and function declarations
+- [x] Implement `CATCH_AMPS_EXCEPTIONS` macro in `c-wrapper/src/amps_ffi.cpp`
+- [x] Implement client lifecycle functions (`amps_ffi_client_create`, `amps_ffi_client_destroy`)
+- [x] Implement connection functions (`amps_ffi_client_connect`, `amps_ffi_client_disconnect`, `amps_ffi_client_logon`)
+- [x] Implement publish functions (`amps_ffi_client_publish`, `amps_ffi_client_delta_publish`)
+- [x] Implement subscription functions (`amps_ffi_client_subscribe`, `amps_ffi_client_unsubscribe`, `amps_ffi_client_unsubscribe_all`)
+- [x] Implement SOW functions (`amps_ffi_client_sow`, `amps_ffi_client_sow_and_subscribe`)
+- [x] Implement message accessor functions (`amps_ffi_message_get_data`, `_get_topic`, `_get_command`, `_get_sow_key`, `_get_bookmark`, `_get_sub_id`, `_get_command_id`)
+- [x] Implement client configuration functions (`amps_ffi_client_set_disconnect_handler`, `amps_ffi_client_set_heartbeat`)
+- [x] Implement utility functions (`amps_ffi_error_string`, `amps_ffi_version`)
+- [x] Create `c-wrapper/CMakeLists.txt` to build the wrapper as a static library
+- [ ] Verify C++ wrapper compiles and links against AMPS client library (blocked: requires AMPS client in `amps-client/`)
 
 ### Phase 2: Rust FFI Bindings
 - [ ] Create `build.rs` with bindgen configuration and library linking
