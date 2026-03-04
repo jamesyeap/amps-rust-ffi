@@ -1006,11 +1006,11 @@ docker-compose -f tests/docker/docker-compose.yml down
 ## 11. Implementation Checklist
 
 ### Phase 0: Project Setup
-- [ ] Initialize Rust project with `cargo init --lib`
-- [ ] Set up `Cargo.toml` with dependencies (`libc`, `thiserror`, `log`, `bindgen`, `cc`)
+- [x] Initialize Rust project with `cargo init --lib`
+- [x] Set up `Cargo.toml` with dependencies (`libc`, `thiserror`, `log`, `bindgen`, `cc`)
 - [ ] Download and extract AMPS C++ client library into `amps-client/`
-- [ ] Create project directory structure (`c-wrapper/include/`, `c-wrapper/src/`, `src/ffi/`, `tests/docker/`)
-- [ ] Add `.gitignore` entries for build artifacts and `amps-client/`
+- [x] Create project directory structure (`c-wrapper/include/`, `c-wrapper/src/`, `src/ffi/`, `tests/docker/`)
+- [x] Add `.gitignore` entries for build artifacts and `amps-client/`
 
 ### Phase 1: C++ Wrapper Layer
 - [ ] Create `c-wrapper/include/amps_ffi.h` with opaque handle types, error codes, error info struct, and function declarations
