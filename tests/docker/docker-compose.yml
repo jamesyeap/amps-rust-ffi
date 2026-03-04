@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  amps-server:
+    image: 60east/amps:latest
+    container_name: amps-test-server
+    ports:
+      - "9007:9007"
+      - "9008:9008"
+    volumes:
+      - ./amps-config.xml:/etc/amps/config.xml:ro
+    command: ["--config", "/etc/amps/config.xml"]
+    healthcheck:
+      test: ["CMD", "amps_check", "--port", "9007"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
