@@ -4,7 +4,6 @@
 //! handle and provides safe accessor methods for message properties.
 
 use crate::ffi;
-use std::ffi::CStr;
 
 /// A message received from AMPS.
 ///
@@ -103,11 +102,13 @@ impl Message {
     /// A string slice containing the topic name, or an empty string if unavailable.
     pub fn topic(&self) -> &str {
         unsafe {
-            let ptr = ffi::amps_ffi_message_get_topic(self.inner);
-            if ptr.is_null() {
+            let mut len: usize = 0;
+            let ptr = ffi::amps_ffi_message_get_topic(self.inner, &mut len);
+            if ptr.is_null() || len == 0 {
                 return "";
             }
-            CStr::from_ptr(ptr).to_str().unwrap_or("")
+            let bytes = std::slice::from_raw_parts(ptr as *const u8, len);
+            std::str::from_utf8(bytes).unwrap_or("")
         }
     }
 
@@ -125,11 +126,13 @@ impl Message {
     /// A string slice containing the command, or an empty string if unavailable.
     pub fn command(&self) -> &str {
         unsafe {
-            let ptr = ffi::amps_ffi_message_get_command(self.inner);
-            if ptr.is_null() {
+            let mut len: usize = 0;
+            let ptr = ffi::amps_ffi_message_get_command(self.inner, &mut len);
+            if ptr.is_null() || len == 0 {
                 return "";
             }
-            CStr::from_ptr(ptr).to_str().unwrap_or("")
+            let bytes = std::slice::from_raw_parts(ptr as *const u8, len);
+            std::str::from_utf8(bytes).unwrap_or("")
         }
     }
 
@@ -143,11 +146,13 @@ impl Message {
     /// A string slice containing the SOW key, or an empty string if unavailable.
     pub fn sow_key(&self) -> &str {
         unsafe {
-            let ptr = ffi::amps_ffi_message_get_sow_key(self.inner);
-            if ptr.is_null() {
+            let mut len: usize = 0;
+            let ptr = ffi::amps_ffi_message_get_sow_key(self.inner, &mut len);
+            if ptr.is_null() || len == 0 {
                 return "";
             }
-            CStr::from_ptr(ptr).to_str().unwrap_or("")
+            let bytes = std::slice::from_raw_parts(ptr as *const u8, len);
+            std::str::from_utf8(bytes).unwrap_or("")
         }
     }
 
@@ -161,11 +166,13 @@ impl Message {
     /// A string slice containing the bookmark, or an empty string if unavailable.
     pub fn bookmark(&self) -> &str {
         unsafe {
-            let ptr = ffi::amps_ffi_message_get_bookmark(self.inner);
-            if ptr.is_null() {
+            let mut len: usize = 0;
+            let ptr = ffi::amps_ffi_message_get_bookmark(self.inner, &mut len);
+            if ptr.is_null() || len == 0 {
                 return "";
             }
-            CStr::from_ptr(ptr).to_str().unwrap_or("")
+            let bytes = std::slice::from_raw_parts(ptr as *const u8, len);
+            std::str::from_utf8(bytes).unwrap_or("")
         }
     }
 
@@ -176,11 +183,13 @@ impl Message {
     /// A string slice containing the subscription ID, or an empty string if unavailable.
     pub fn sub_id(&self) -> &str {
         unsafe {
-            let ptr = ffi::amps_ffi_message_get_sub_id(self.inner);
-            if ptr.is_null() {
+            let mut len: usize = 0;
+            let ptr = ffi::amps_ffi_message_get_sub_id(self.inner, &mut len);
+            if ptr.is_null() || len == 0 {
                 return "";
             }
-            CStr::from_ptr(ptr).to_str().unwrap_or("")
+            let bytes = std::slice::from_raw_parts(ptr as *const u8, len);
+            std::str::from_utf8(bytes).unwrap_or("")
         }
     }
 
@@ -193,11 +202,13 @@ impl Message {
     /// A string slice containing the command ID, or an empty string if unavailable.
     pub fn command_id(&self) -> &str {
         unsafe {
-            let ptr = ffi::amps_ffi_message_get_command_id(self.inner);
-            if ptr.is_null() {
+            let mut len: usize = 0;
+            let ptr = ffi::amps_ffi_message_get_command_id(self.inner, &mut len);
+            if ptr.is_null() || len == 0 {
                 return "";
             }
-            CStr::from_ptr(ptr).to_str().unwrap_or("")
+            let bytes = std::slice::from_raw_parts(ptr as *const u8, len);
+            std::str::from_utf8(bytes).unwrap_or("")
         }
     }
 

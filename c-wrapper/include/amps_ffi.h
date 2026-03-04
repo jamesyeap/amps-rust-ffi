@@ -108,12 +108,12 @@ int amps_ffi_client_sow_and_subscribe(amps_ffi_client_t client,
 
 /* ── Message access (from handler callbacks) ── */
 const char* amps_ffi_message_get_data(amps_ffi_message_t message, size_t* len);
-const char* amps_ffi_message_get_topic(amps_ffi_message_t message);
-const char* amps_ffi_message_get_command(amps_ffi_message_t message);
-const char* amps_ffi_message_get_sow_key(amps_ffi_message_t message);
-const char* amps_ffi_message_get_bookmark(amps_ffi_message_t message);
-const char* amps_ffi_message_get_sub_id(amps_ffi_message_t message);
-const char* amps_ffi_message_get_command_id(amps_ffi_message_t message);
+const char* amps_ffi_message_get_topic(amps_ffi_message_t message, size_t* len);
+const char* amps_ffi_message_get_command(amps_ffi_message_t message, size_t* len);
+const char* amps_ffi_message_get_sow_key(amps_ffi_message_t message, size_t* len);
+const char* amps_ffi_message_get_bookmark(amps_ffi_message_t message, size_t* len);
+const char* amps_ffi_message_get_sub_id(amps_ffi_message_t message, size_t* len);
+const char* amps_ffi_message_get_command_id(amps_ffi_message_t message, size_t* len);
 
 /* ── Client configuration ── */
 int amps_ffi_client_set_disconnect_handler(amps_ffi_client_t client,

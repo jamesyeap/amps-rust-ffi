@@ -195,8 +195,11 @@ uint64_t amps_ffi_client_publish(amps_ffi_client_t client,
     }
     AMPS::Client* cpp_client = reinterpret_cast<AMPS::Client*>(client);
     try {
-        cpp_client->publish(topic, strlen(topic), data, data_len, expiration);
-        return 1; /* success – AMPS publish does not return a sequence number directly */
+        if (expiration > 0) {
+            return cpp_client->publish(topic, strlen(topic), data, data_len, expiration);
+        } else {
+            return cpp_client->publish(topic, strlen(topic), data, data_len);
+        }
     } catch (const AMPS::AMPSException& e) {
         set_error(error, AMPS_FFI_ERROR_PUBLISH, e.what());
         return 0;
@@ -220,8 +223,7 @@ uint64_t amps_ffi_client_delta_publish(amps_ffi_client_t client,
     }
     AMPS::Client* cpp_client = reinterpret_cast<AMPS::Client*>(client);
     try {
-        cpp_client->deltaPublish(topic, data, data_len);
-        return 1;
+        return cpp_client->deltaPublish(topic, data, data_len);
     } catch (const AMPS::AMPSException& e) {
         set_error(error, AMPS_FFI_ERROR_PUBLISH, e.what());
         return 0;
@@ -350,48 +352,73 @@ int amps_ffi_client_sow_and_subscribe(amps_ffi_client_t client,
  *  Message access
  * ═══════════════════════════════════════════════════════════════════════ */
 
+/* Helper to copy Field data to thread-local buffer.
+ * This ensures the returned pointer remains valid after the function returns.
+ * The AMPS::Field class stores data as length + pointer, but the pointer may
+ * point to internal message buffer that can be invalidated.
+ */
+static const char* copy_to_thread_local_buffer(const AMPS::Field& field, size_t* len) {
+    // Thread-local buffer to store the copied data
+    static thread_local std::string buffer;
+    
+    if (field.len() == 0 || field.data() == nullptr) {
+        if (len) *len = 0;
+        return "";
+    }
+    
+    // Copy the data to the buffer
+    buffer.assign(field.data(), field.len());
+    if (len) *len = buffer.length();
+    return buffer.c_str();
+}
+
 const char* amps_ffi_message_get_data(amps_ffi_message_t message, size_t* len) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    const char* data = msg->getData().data();
-    if (len) *len = msg->getData().len();
-    return data;
+    const AMPS::Field& f = msg->getData();
+    return copy_to_thread_local_buffer(f, len);
 }
 
-const char* amps_ffi_message_get_topic(amps_ffi_message_t message) {
+const char* amps_ffi_message_get_topic(amps_ffi_message_t message, size_t* len) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    return msg->getTopic().data();
+    const AMPS::Field& f = msg->getTopic();
+    return copy_to_thread_local_buffer(f, len);
 }
 
-const char* amps_ffi_message_get_command(amps_ffi_message_t message) {
+const char* amps_ffi_message_get_command(amps_ffi_message_t message, size_t* len) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    return msg->getCommand().data();
+    const AMPS::Field& f = msg->getCommand();
+    return copy_to_thread_local_buffer(f, len);
 }
 
-const char* amps_ffi_message_get_sow_key(amps_ffi_message_t message) {
+const char* amps_ffi_message_get_sow_key(amps_ffi_message_t message, size_t* len) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    return msg->getSowKey().data();
+    const AMPS::Field& f = msg->getSowKey();
+    return copy_to_thread_local_buffer(f, len);
 }
 
-const char* amps_ffi_message_get_bookmark(amps_ffi_message_t message) {
+const char* amps_ffi_message_get_bookmark(amps_ffi_message_t message, size_t* len) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    return msg->getBookmark().data();
+    const AMPS::Field& f = msg->getBookmark();
+    return copy_to_thread_local_buffer(f, len);
 }
 
-const char* amps_ffi_message_get_sub_id(amps_ffi_message_t message) {
+const char* amps_ffi_message_get_sub_id(amps_ffi_message_t message, size_t* len) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    return msg->getSubId().data();
+    const AMPS::Field& f = msg->getSubId();
+    return copy_to_thread_local_buffer(f, len);
 }
 
-const char* amps_ffi_message_get_command_id(amps_ffi_message_t message) {
+const char* amps_ffi_message_get_command_id(amps_ffi_message_t message, size_t* len) {
     if (!message) return nullptr;
     const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    return msg->getCommandId().data();
+    const AMPS::Field& f = msg->getCommandId();
+    return copy_to_thread_local_buffer(f, len);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
