@@ -1,3 +1,11 @@
+# ⚠️⚠️⚠️ IMPLEMENTATION INSTRUCTIONS — READ THIS FIRST ⚠️⚠️⚠️
+
+> **When told to "start", do the following:**
+>
+> Read this entire PLAN.md, then complete the **next incomplete phase** in the Implementation Checklist (Section 11). ALWAYS write tests, and ensure that all testcases are passing before marking any task as done. If you encounter any bug, try to fix it, and then write test cases to ensure that it is fixed (always run the testcases and ensure that they are passing). Document any interesting findings in a relevant section in PLAN.md.
+
+---
+
 # AMPS Rust FFI Plan
 
 This document outlines the plan for creating a Rust FFI (Foreign Function Interface) for the AMPS (Advanced Message Processing System) C++ client library.
