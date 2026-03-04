@@ -1032,9 +1032,10 @@ docker-compose -f tests/docker/docker-compose.yml down
 ### Phase 0: Project Setup
 - [x] Initialize Rust project with `cargo init --lib`
 - [x] Set up `Cargo.toml` with dependencies (`libc`, `thiserror`, `log`, `bindgen`, `cc`)
-- [ ] Download and extract AMPS C++ client library into `amps-client/`
+- [x] Download and extract AMPS C++ client library into `amps-client/`
 - [x] Create project directory structure (`c-wrapper/include/`, `c-wrapper/src/`, `src/ffi/`, `tests/docker/`)
 - [x] Add `.gitignore` entries for build artifacts and `amps-client/`
+- [x] Build AMPS C++ client library (`libamps.a`)
 
 ### Phase 1: C++ Wrapper Layer
 - [x] Create `c-wrapper/include/amps_ffi.h` with opaque handle types, error codes, error info struct, and function declarations
@@ -1051,10 +1052,10 @@ docker-compose -f tests/docker/docker-compose.yml down
 - [x] Verify C++ wrapper compiles and links against AMPS client library
 
 ### Phase 2: Rust FFI Bindings
-- [ ] Create `build.rs` with bindgen configuration and library linking
-- [ ] Run bindgen and verify auto-generated bindings in `$OUT_DIR/bindings.rs`
-- [ ] Create `src/ffi/mod.rs` (or `src/ffi/bindings.rs`) to include the generated bindings
-- [ ] Verify `cargo build` succeeds with the FFI bindings
+- [x] Create `build.rs` with bindgen configuration and library linking
+- [x] Run bindgen and verify auto-generated bindings in `$OUT_DIR/bindings.rs`
+- [x] Create `src/ffi/mod.rs` (or `src/ffi/bindings.rs`) to include the generated bindings
+- [x] Verify `cargo build` succeeds with the FFI bindings
 
 ### Phase 3: Safe Rust API — Error Handling
 - [ ] Implement `AmpsError` enum in `src/error.rs` with all error variants
