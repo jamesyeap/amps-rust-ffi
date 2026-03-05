@@ -5,6 +5,11 @@ members = [".", "example"]
 name = "amps-rust-ffi"
 version = "0.1.0"
 edition = "2021"
+description = "Safe Rust bindings for the AMPS (Advanced Message Processing System) C++ client library"
+readme = "README.md"
+license = "MIT"
+keywords = ["amps", "messaging", "ffi", "pubsub", "sow"]
+categories = ["api-bindings", "network-programming"]
 
 [dependencies]
 libc = "0.2"
