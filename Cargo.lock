@@ -12,6 +12,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "amps-example"
+version = "0.1.0"
+dependencies = [
+ "amps-rust-ffi",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "amps-rust-ffi"
 version = "0.1.0"
 dependencies = [
