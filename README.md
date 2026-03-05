@@ -2,6 +2,8 @@
 
 Safe Rust bindings for the [AMPS](https://crankuptheamps.com) (Advanced Message Processing System) C++ client library.
 
+> **⚠️ WARNING: This library is entirely vibe-coded and is NOT safe for production use.** It was built as an experiment with AI-assisted development. There are likely memory safety issues, undefined behavior at the FFI boundary, and untested edge cases. Use at your own risk — you have been warned.
+
 ## Features
 
 - **Publish / Subscribe** — send and receive messages on topics
