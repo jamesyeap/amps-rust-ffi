@@ -14,46 +14,45 @@ Safe Rust bindings for the [AMPS](https://crankuptheamps.com) (Advanced Message 
 - **Heartbeat** — connection health monitoring
 - **Typed Errors** — every AMPS exception maps to an `AmpsError` variant
 
+## Installation
+
+Add this to your `Cargo.toml`:
+
+```toml
+[dependencies]
+amps-rust-ffi = "0.1.0"
+```
+
+Or use `cargo add`:
+
+```bash
+cargo add amps-rust-ffi
+```
+
 ## Prerequisites
 
 - **Rust 1.70+** with Cargo
 - **C++ compiler** (Clang 10+, GCC 9+, or MSVC 2019+)
 - **CMake 3.16+**
-- **AMPS C++ Client library** v5.3.5.1 — download from <https://crankuptheamps.com>
+
+> **Note:** The AMPS C++ client libraries are bundled with the crate, so you don't need to download them separately for building. However, to run the library, you will need an AMPS server to connect to.
 
 ## Getting Started
 
-### 1. Set up the AMPS C++ client
+### 1. Create a new project
 
 ```bash
-# Extract so that amps-client/include/amps/ampsplusplus.hpp exists
-tar -xzf amps-c++-client-5.3.5.1-*.tar.gz
-mv amps-c++-client-5.3.5.1-* amps-client
+cargo new my-amps-app
+cd my-amps-app
 ```
 
-### 2. Build
+### 2. Add the dependency
 
 ```bash
-# Build the C++ wrapper
-mkdir -p c-wrapper/build && cd c-wrapper/build
-cmake ..
-make
-cd ../..
-
-# Build the Rust library
-cargo build
+cargo add amps-rust-ffi
 ```
 
-### 3. Run tests
-
-Tests require a running AMPS server:
-
-```bash
-docker-compose -f tests/docker/docker-compose.yml up -d
-cargo test
-```
-
-## Quick Start
+### 3. Write some code
 
 ```rust
 use amps_rust_ffi::Client;
@@ -74,6 +73,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     client.disconnect()?;
     Ok(())
 }
+```
+
+### 4. Run with an AMPS server
+
+```bash
+# Start an AMPS server (example using Docker)
+docker run -p 9007:9007 -p 8085:8085 crankuptheamps/amps:latest
+
+# Run your app
+cargo run
+```
+
+## Examples
+
+The [`amps-example`](https://crates.io/crates/amps-example) crate provides runnable examples:
+
+```bash
+cargo install amps-example
+
+# Run the chat example (requires AMPS server)
+amps-examples --help
+```
+
+Or run directly with cargo:
+
+```bash
+cargo install amps-example
+amps-examples  # Shows available examples
+```
+
+A ready-to-run chat CLI is included. Two users can chat over a shared AMPS topic:
+
+```bash
+# Terminal 1
+amps-example --bin chat -- alice
+
+# Terminal 2  
+amps-example --bin chat -- bob
 ```
 
 ## Usage
@@ -161,26 +198,52 @@ let handle = std::thread::spawn(move || {
 handle.join().unwrap();
 ```
 
-## Chat Example
+## Development (Building from Source)
 
-A ready-to-run chat CLI is included in `example/`. Two users can chat over a shared AMPS topic:
+If you want to build this crate from source instead of using the published version:
+
+### 1. Clone the repository
 
 ```bash
-# Start AMPS
+git clone https://github.com/yourusername/amps-rust-ffi
+cd amps-rust-ffi
+```
+
+### 2. Set up the AMPS C++ client (for development)
+
+```bash
+# Extract so that amps-client/include/amps/ampsplusplus.hpp exists
+tar -xzf amps-c++-client-5.3.5.1-*.tar.gz
+mv amps-c++-client-5.3.5.1-* amps-client
+```
+
+### 3. Build
+
+```bash
+# Build the C++ wrapper
+mkdir -p c-wrapper/build && cd c-wrapper/build
+cmake ..
+make
+cd ../..
+
+# Build the Rust library
+cargo build
+```
+
+### 4. Run tests
+
+Tests require a running AMPS server:
+
+```bash
 docker-compose -f tests/docker/docker-compose.yml up -d
-
-# Terminal 1
-cd example && cargo run --bin chat -- alice
-
-# Terminal 2
-cd example && cargo run --bin chat -- bob
+cargo test
 ```
 
 ## Project Structure
 
 ```
 amps-rust-ffi/
-├── amps-client/            # AMPS C++ client (not checked in)
+├── amps-client/            # AMPS C++ client (bundled for crates.io)
 ├── c-wrapper/
 │   ├── include/amps_ffi.h  # C-compatible FFI header
 │   ├── src/amps_ffi.cpp    # C++ wrapper implementation
@@ -207,7 +270,7 @@ cargo publish --dry-run
 cargo publish
 ```
 
-> **Note:** The AMPS C++ client library is a proprietary dependency that is not bundled. Users must download it separately from <https://crankuptheamps.com> and place it in `amps-client/`.
+> **Note:** The AMPS C++ client library is a proprietary dependency that is bundled as pre-built static libraries for convenience. The crate includes libraries for macOS (arm64) and can be extended for other platforms.
 
 ## License
 

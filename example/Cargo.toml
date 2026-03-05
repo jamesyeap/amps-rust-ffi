@@ -1,7 +1,10 @@
 [package]
 name = "amps-example"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
+description = "Example usage of the amps-rust-ffi crate"
+license = "MIT"
+repository = "https://github.com/yourusername/amps-rust-ffi"
 
 [[bin]]
 name = "amps-examples"
@@ -12,6 +15,6 @@ name = "chat"
 path = "src/bin/chat.rs"
 
 [dependencies]
-amps-rust-ffi = { path = ".." }
+amps-rust-ffi = "0.1.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

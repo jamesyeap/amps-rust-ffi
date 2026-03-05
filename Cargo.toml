@@ -3,13 +3,31 @@ members = [".", "example"]
 
 [package]
 name = "amps-rust-ffi"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Safe Rust bindings for the AMPS (Advanced Message Processing System) C++ client library"
 readme = "README.md"
 license = "MIT"
+repository = "https://github.com/yourusername/amps-rust-ffi"
 keywords = ["amps", "messaging", "ffi", "pubsub", "sow"]
 categories = ["api-bindings", "network-programming"]
+include = [
+    "src/**/*.rs",
+    "Cargo.toml",
+    "Cargo.lock",
+    "README.md",
+    "LICENSE",
+    "build.rs",
+    "amps-client/LICENSE",
+    "amps-client/lib/**/*.a",
+    "amps-client/include/**/*.h",
+    "amps-client/include/**/*.hpp",
+    "c-wrapper/build/libamps_ffi.a",
+    "c-wrapper/include/*.h",
+    "c-wrapper/src/*.cpp",
+    "c-wrapper/src/*.c",
+    "c-wrapper/CMakeLists.txt",
+]
 
 [dependencies]
 libc = "0.2"
