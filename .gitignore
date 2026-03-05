@@ -1,5 +1,6 @@
 # Rust build artifacts
 /target/
+/example/target/
 
 # AMPS C++ client library (downloaded dependency)
 /amps-client/
