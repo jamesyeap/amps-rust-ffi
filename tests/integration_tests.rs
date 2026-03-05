@@ -7,8 +7,15 @@
 //!   docker-compose -f tests/docker/docker-compose.yml down
 
 use amps_rust_ffi::{AmpsError, Client};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+
+/// Generate a unique client name to avoid AMPS duplicate-name conflicts in parallel tests
+fn unique_name(prefix: &str) -> String {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    format!("{}-{}", prefix, COUNTER.fetch_add(1, Ordering::Relaxed))
+}
 
 /// Get the AMPS connection URI from environment or use default
 fn amps_uri() -> String {
@@ -17,7 +24,7 @@ fn amps_uri() -> String {
 
 /// Helper function to check if AMPS server is available
 fn is_amps_available() -> bool {
-    let mut client = match Client::new("test-availability") {
+    let mut client = match Client::new(&unique_name("test-availability")) {
         Ok(c) => c,
         Err(_) => return false,
     };
@@ -52,7 +59,7 @@ macro_rules! skip_if_no_amps {
 fn test_connect_and_publish() {
     skip_if_no_amps!();
 
-    let mut client = Client::new("test-publisher").expect("Failed to create client");
+    let mut client = Client::new(&unique_name("test-publisher")).expect("Failed to create client");
 
     // Connect to AMPS server
     client
@@ -86,7 +93,7 @@ fn test_connect_and_publish() {
 fn test_delta_publish() {
     skip_if_no_amps!();
 
-    let mut client = Client::new("test-delta-publisher").expect("Failed to create client");
+    let mut client = Client::new(&unique_name("test-delta-publisher")).expect("Failed to create client");
 
     client.connect(&amps_uri()).expect("Failed to connect");
     client.logon(None, 5000).expect("Failed to logon");
@@ -108,11 +115,11 @@ fn test_delta_publish() {
 fn test_subscribe_and_receive() {
     skip_if_no_amps!();
 
-    let topic = "subscription-test";
+    let topic = &unique_name("subscription-test");
     let test_message = r#"{"test": "data", "value": 42}"#;
 
     // Create publisher client
-    let mut publisher = Client::new("test-sub-publisher").expect("Failed to create publisher");
+    let mut publisher = Client::new(&unique_name("test-sub-publisher")).expect("Failed to create publisher");
     publisher
         .connect(&amps_uri())
         .expect("Failed to connect publisher");
@@ -121,7 +128,7 @@ fn test_subscribe_and_receive() {
         .expect("Failed to logon publisher");
 
     // Create subscriber client
-    let mut subscriber = Client::new("test-subscriber").expect("Failed to create subscriber");
+    let mut subscriber = Client::new(&unique_name("test-subscriber")).expect("Failed to create subscriber");
     subscriber
         .connect(&amps_uri())
         .expect("Failed to connect subscriber");
@@ -179,16 +186,16 @@ fn test_subscribe_and_receive() {
 fn test_subscribe_with_filter() {
     skip_if_no_amps!();
 
-    let topic = "subscription-test";
+    let topic = &unique_name("subscription-filter-test");
 
     // Create publisher
-    let mut publisher = Client::new("test-filter-publisher").expect("Failed to create publisher");
+    let mut publisher = Client::new(&unique_name("test-filter-publisher")).expect("Failed to create publisher");
     publisher.connect(&amps_uri()).expect("Failed to connect");
     publisher.logon(None, 5000).expect("Failed to logon");
 
     // Create subscriber with filter
     let mut subscriber =
-        Client::new("test-filter-subscriber").expect("Failed to create subscriber");
+        Client::new(&unique_name("test-filter-subscriber")).expect("Failed to create subscriber");
     subscriber.connect(&amps_uri()).expect("Failed to connect");
     subscriber.logon(None, 5000).expect("Failed to logon");
 
@@ -250,7 +257,7 @@ fn test_sow_query() {
     let topic = "sow-test";
 
     // Create publisher to populate SOW
-    let mut publisher = Client::new("test-sow-publisher").expect("Failed to create publisher");
+    let mut publisher = Client::new(&unique_name("test-sow-publisher")).expect("Failed to create publisher");
     publisher.connect(&amps_uri()).expect("Failed to connect");
     publisher.logon(None, 5000).expect("Failed to logon");
 
@@ -269,7 +276,7 @@ fn test_sow_query() {
     std::thread::sleep(Duration::from_millis(100));
 
     // Create client for SOW query
-    let mut client = Client::new("test-sow-querier").expect("Failed to create client");
+    let mut client = Client::new(&unique_name("test-sow-querier")).expect("Failed to create client");
     client.connect(&amps_uri()).expect("Failed to connect");
     client.logon(None, 5000).expect("Failed to logon");
 
@@ -312,7 +319,7 @@ fn test_sow_query_with_filter() {
 
     // Create publisher
     let mut publisher =
-        Client::new("test-sow-filter-publisher").expect("Failed to create publisher");
+        Client::new(&unique_name("test-sow-filter-publisher")).expect("Failed to create publisher");
     publisher.connect(&amps_uri()).expect("Failed to connect");
     publisher.logon(None, 5000).expect("Failed to logon");
 
@@ -353,7 +360,7 @@ fn test_sow_query_with_filter() {
     std::thread::sleep(Duration::from_millis(100));
 
     // Create client for SOW query
-    let mut client = Client::new("test-sow-filter-querier").expect("Failed to create client");
+    let mut client = Client::new(&unique_name("test-sow-filter-querier")).expect("Failed to create client");
     client.connect(&amps_uri()).expect("Failed to connect");
     client.logon(None, 5000).expect("Failed to logon");
 
@@ -401,7 +408,7 @@ fn test_sow_and_subscribe() {
     let topic = "sow-test";
 
     // Create publisher
-    let mut publisher = Client::new("test-sowsub-publisher").expect("Failed to create publisher");
+    let mut publisher = Client::new(&unique_name("test-sowsub-publisher")).expect("Failed to create publisher");
     publisher.connect(&amps_uri()).expect("Failed to connect");
     publisher.logon(None, 5000).expect("Failed to logon");
 
@@ -414,7 +421,7 @@ fn test_sow_and_subscribe() {
 
     // Create subscriber
     let mut subscriber =
-        Client::new("test-sowsub-subscriber").expect("Failed to create subscriber");
+        Client::new(&unique_name("test-sowsub-subscriber")).expect("Failed to create subscriber");
     subscriber.connect(&amps_uri()).expect("Failed to connect");
     subscriber.logon(None, 5000).expect("Failed to logon");
 
@@ -465,9 +472,9 @@ fn test_sow_and_subscribe() {
 fn test_unsubscribe() {
     skip_if_no_amps!();
 
-    let topic = "test-topic";
+    let topic = &unique_name("unsub-test-topic");
 
-    let mut client = Client::new("test-unsubscriber").expect("Failed to create client");
+    let mut client = Client::new(&unique_name("test-unsubscriber")).expect("Failed to create client");
     client.connect(&amps_uri()).expect("Failed to connect");
     client.logon(None, 5000).expect("Failed to logon");
 
@@ -485,7 +492,7 @@ fn test_unsubscribe() {
     client.unsubscribe_all().expect("Failed to unsubscribe all");
 
     // Create a publisher to send messages
-    let mut publisher = Client::new("test-unsub-publisher").expect("Failed to create publisher");
+    let mut publisher = Client::new(&unique_name("test-unsub-publisher")).expect("Failed to create publisher");
     publisher.connect(&amps_uri()).expect("Failed to connect");
     publisher.logon(None, 5000).expect("Failed to logon");
 
@@ -507,7 +514,7 @@ fn test_unsubscribe() {
 #[test]
 fn test_exception_handling_invalid_uri() {
     // This test doesn't require a running AMPS server
-    let mut client = Client::new("test-error").expect("Failed to create client");
+    let mut client = Client::new(&unique_name("test-error")).expect("Failed to create client");
 
     // Attempt to connect to an invalid/unreachable URI
     let result = client.connect("tcp://invalid-host:59999/amps/json");
@@ -532,29 +539,21 @@ fn test_exception_handling_invalid_uri() {
 fn test_exception_handling_already_connected() {
     skip_if_no_amps!();
 
-    let mut client = Client::new("test-already-connected").expect("Failed to create client");
+    let mut client = Client::new(&unique_name("test-already-connected")).expect("Failed to create client");
 
     // First connection
     client
         .connect(&amps_uri())
         .expect("First connect should succeed");
+    client.logon(None, 5000).expect("Failed to logon");
 
-    // Second connection attempt should fail
-    let result = client.connect(&amps_uri());
+    // Disconnect and reconnect to verify reconnection works
+    client.disconnect().expect("Failed to disconnect");
 
-    // This may either succeed (if AMPS allows reconnect) or fail with AlreadyConnected
-    match result {
-        Ok(_) => {
-            // Some implementations allow reconnect
-            eprintln!("Second connect succeeded (allowed by AMPS implementation)");
-        }
-        Err(AmpsError::AlreadyConnected { .. }) => {
-            // Expected error
-        }
-        Err(other) => {
-            eprintln!("Got unexpected error on second connect: {:?}", other);
-        }
-    }
+    client
+        .connect(&amps_uri())
+        .expect("Reconnect after disconnect should succeed");
+    client.logon(None, 5000).expect("Failed to logon after reconnect");
 
     client.disconnect().expect("Failed to disconnect");
 }
@@ -562,7 +561,7 @@ fn test_exception_handling_already_connected() {
 #[test]
 fn test_exception_handling_not_connected() {
     // This test doesn't require a running AMPS server
-    let mut client = Client::new("test-not-connected").expect("Failed to create client");
+    let mut client = Client::new(&unique_name("test-not-connected")).expect("Failed to create client");
 
     // Try to publish without connecting
     let result = client.publish("test-topic", r#"{"data": "test"}"#);
@@ -577,7 +576,7 @@ fn test_exception_handling_not_connected() {
 fn test_set_heartbeat() {
     skip_if_no_amps!();
 
-    let mut client = Client::new("test-heartbeat").expect("Failed to create client");
+    let mut client = Client::new(&unique_name("test-heartbeat")).expect("Failed to create client");
     client.connect(&amps_uri()).expect("Failed to connect");
     client.logon(None, 5000).expect("Failed to logon");
 
@@ -596,8 +595,8 @@ fn test_multiple_clients() {
     // Create multiple clients
     let mut clients: Vec<Client> = Vec::new();
 
-    for i in 0..5 {
-        let client = Client::new(&format!("test-multi-{}", i)).expect("Failed to create client");
+    for _i in 0..5 {
+        let client = Client::new(&unique_name("test-multi")).expect("Failed to create client");
         clients.push(client);
     }
 
@@ -608,7 +607,7 @@ fn test_multiple_clients() {
     }
 
     // Use first client to publish, others to subscribe
-    let topic = "test-topic";
+    let topic = &unique_name("multi-client-topic");
 
     // Set up subscriptions on clients 1-4
     let received_count = Arc::new(Mutex::new(0));
@@ -648,14 +647,14 @@ fn test_multiple_clients() {
 fn test_message_properties() {
     skip_if_no_amps!();
 
-    let topic = "test-topic";
+    let topic = &unique_name("msg-props-topic");
     let test_data = r#"{"id": "msg-test", "value": 123}"#;
 
-    let mut publisher = Client::new("test-msg-props-pub").expect("Failed to create publisher");
+    let mut publisher = Client::new(&unique_name("test-msg-props-pub")).expect("Failed to create publisher");
     publisher.connect(&amps_uri()).expect("Failed to connect");
     publisher.logon(None, 5000).expect("Failed to logon");
 
-    let mut subscriber = Client::new("test-msg-props-sub").expect("Failed to create subscriber");
+    let mut subscriber = Client::new(&unique_name("test-msg-props-sub")).expect("Failed to create subscriber");
     subscriber.connect(&amps_uri()).expect("Failed to connect");
     subscriber.logon(None, 5000).expect("Failed to logon");
 
@@ -688,7 +687,7 @@ fn test_message_properties() {
     let (received_topic, received_data, received_command, data_len, has_data) =
         msg_info.clone().unwrap();
 
-    assert_eq!(received_topic, topic, "Topic mismatch");
+    assert_eq!(&received_topic, topic, "Topic mismatch");
     assert_eq!(received_data, test_data, "Data mismatch");
     assert_eq!(received_command, "publish", "Command should be 'publish'");
     assert_eq!(data_len, test_data.len(), "Data length mismatch");
@@ -720,8 +719,8 @@ fn test_connection_to_different_uris() {
         amps_uri(), // Default URI
     ];
 
-    for (i, uri) in uris.iter().enumerate() {
-        let mut client = Client::new(&format!("test-uri-{}", i)).expect("Failed to create client");
+    for uri in uris.iter() {
+        let mut client = Client::new(&unique_name("test-uri")).expect("Failed to create client");
 
         match client.connect(uri) {
             Ok(_) => {

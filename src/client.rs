@@ -290,7 +290,7 @@ impl Client {
             message: [0; 1024],
         };
 
-        let result = unsafe {
+        let _result = unsafe {
             ffi::amps_ffi_client_delta_publish(
                 self.inner,
                 topic.as_ptr(),
@@ -300,7 +300,7 @@ impl Client {
             )
         };
 
-        if result == 0 {
+        if error_info.code != ffi::amps_ffi_error_t_AMPS_FFI_OK {
             return Err(AmpsError::from(error_info));
         }
 
