@@ -7,6 +7,7 @@
 
 # AMPS server binaries (downloaded dependency)
 /tests/docker/downloaded_folders/
+/tests/docker/amps_binary/
 
 # C++ wrapper build artifacts
 /c-wrapper/build/
