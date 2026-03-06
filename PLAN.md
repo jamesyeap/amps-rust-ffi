@@ -1152,6 +1152,16 @@ client.sow(topic, Some("/category = 'A'"), move |msg| {
 
 **Fix**: Removed the monotonic sequence number assertion. The test now simply verifies that publish operations succeed. Without a publish store, AMPS returns 0 for all sequence numbers. With a publish store, sequence numbers would be meaningful but still not necessarily monotonic across different publish operations.
 
+### Code Audit Findings
+
+18. **Shared thread-local buffer causes UB in message accessors**: `copy_to_thread_local_buffer()` uses a single `static thread_local std::string buffer` for all seven message accessor functions. When a Rust callback calls `msg.data()` and then `msg.topic()`, the second call overwrites the buffer, invalidating the `&str` returned by the first call. This is the most critical bug — it silently corrupts data in normal usage.
+
+19. **`CallbackContext` and `DisconnectContext` are never freed**: The C++ wrapper heap-allocates a `CallbackContext` (subscribe, sow, sow_and_subscribe) and `DisconnectContext` (set_disconnect_handler) via `new` but never calls `delete`. These leak on every subscribe/unsubscribe cycle.
+
+20. **Rust disconnect handler trampoline is a no-op**: The `disconnect_handler_trampoline` function in `client.rs` reconstructs the handler pointer but never calls it (`let _ = handler;`). Additionally, the handler's `Box` (passed as `user_data` via `Box::into_raw`) is never reclaimed, leaking memory.
+
+21. **`unsafe impl Sync for Message` is unsound**: `Message` wraps a raw pointer to C++-owned memory valid only during the callback. Marking it `Sync` allows sharing across threads where the pointer may already be invalidated. It should only be `Send` (if at all).
+
 ## 13. References
 
 - [AMPS C++ Developer Guide](https://devnull.crankuptheamps.com/documentation/html/5.2.0.0/dev-guides/cpp/html/)
@@ -1234,3 +1244,11 @@ client.sow(topic, Some("/category = 'A'"), move |msg| {
 ### Phase 8: CI/CD
 - [x] Create `.github/workflows/test.yml` for automated testing
 - [x] Verify CI pipeline builds C++ wrapper, Rust library, and runs tests
+
+### Phase 9: Bug Fixes (from code audit)
+- [ ] **BUG-1: `copy_to_thread_local_buffer` clobbers previous values** — `amps_ffi.cpp` uses a single `thread_local std::string buffer` shared across all `amps_ffi_message_get_*` calls. Calling e.g. `msg.data()` then `msg.topic()` invalidates the pointer returned by `data()`. The Rust `Message` methods return `&str` references to this same buffer, so any two accessor calls in sequence produce a dangling reference. Fix: use a separate `thread_local` buffer per accessor function, or copy into caller-owned memory.
+- [ ] **BUG-2: `CallbackContext` memory leak (C++)** — `amps_ffi_client_subscribe`, `amps_ffi_client_sow`, and `amps_ffi_client_sow_and_subscribe` each `new CallbackContext{...}` but never `delete` it. On error the `CATCH_AMPS_EXCEPTIONS` macro returns without cleanup, and on success there is no mechanism to free it on unsubscribe/destroy.
+- [ ] **BUG-3: `disconnect_handler_trampoline` is a no-op (Rust)** — `client.rs` line ~720: the Rust disconnect trampoline creates a handler reference but does `let _ = handler;` — it never actually calls the user's closure. The `set_disconnect_handler` API silently does nothing.
+- [ ] **BUG-4: Disconnect handler `user_data` never freed (Rust)** — `client.rs` line ~634: the handler is `Box::into_raw`'d to pass as `user_data`, but is never reclaimed on success. The `Box` is leaked forever.
+- [ ] **BUG-5: `DisconnectContext` memory leak (C++)** — `amps_ffi.cpp` line ~449: `new DisconnectContext{...}` is never deleted.
+- [ ] **BUG-6: Unsound `unsafe impl Sync for Message`** — `message.rs`: `Message` wraps a raw FFI pointer to C++-owned data that is only valid during the callback. The `unsafe impl Sync` is unsound because the underlying `AMPS::Message` is not thread-safe and the pointer is invalidated after the callback returns. Fix: remove `unsafe impl Sync for Message`.
