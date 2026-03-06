@@ -3,7 +3,7 @@ members = [".", "example"]
 
 [package]
 name = "amps-rust-ffi"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "Safe Rust bindings for the AMPS (Advanced Message Processing System) C++ client library"
 readme = "README.md"
