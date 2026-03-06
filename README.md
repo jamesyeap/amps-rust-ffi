@@ -35,7 +35,7 @@ cargo add amps-rust-ffi
 - **C++ compiler** (Clang 10+, GCC 9+, or MSVC 2019+)
 - **CMake 3.16+**
 
-> **Note:** The AMPS C++ client libraries are bundled with the crate, so you don't need to download them separately for building. However, to run the library, you will need an AMPS server to connect to.
+> **Note:** This library is built against the **AMPS C++ Client SDK v5.3.5.1**. The C++ client libraries are bundled with the crate, so you don't need to download them separately for building. However, to run the library, you will need an AMPS server to connect to.
 
 ## Getting Started
 
