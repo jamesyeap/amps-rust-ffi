@@ -15,24 +15,9 @@ dependencies = [
 name = "amps-example"
 version = "0.1.1"
 dependencies = [
- "amps-rust-ffi 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "amps-rust-ffi 0.1.1",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "amps-rust-ffi"
-version = "0.1.1"
-dependencies = [
- "bindgen",
- "cc",
- "env_logger",
- "libc",
- "log",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
 ]
 
 [[package]]
@@ -46,6 +31,21 @@ dependencies = [
  "libc",
  "log",
  "thiserror",
+]
+
+[[package]]
+name = "amps-rust-ffi"
+version = "0.1.2"
+dependencies = [
+ "bindgen",
+ "cc",
+ "env_logger",
+ "libc",
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]
