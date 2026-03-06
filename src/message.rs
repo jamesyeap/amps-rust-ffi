@@ -248,9 +248,9 @@ impl Message {
     }
 }
 
-// Messages can be sent between threads as they are just views into AMPS-owned memory
+// Messages can be sent between threads as they are just views into AMPS-owned memory.
+// Note: Message is NOT Sync because the underlying AMPS::Message is not thread-safe.
 unsafe impl Send for Message {}
-unsafe impl Sync for Message {}
 
 impl std::fmt::Debug for Message {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -270,10 +270,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_message_is_send_and_sync() {
+    fn test_message_is_send() {
         fn assert_send<T: Send>() {}
-        fn assert_sync<T: Sync>() {}
         assert_send::<Message>();
-        assert_sync::<Message>();
     }
 }

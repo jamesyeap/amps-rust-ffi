@@ -48,6 +48,7 @@ use std::ptr;
 /// The [`Drop`] implementation will automatically clean up the underlying handle.
 pub struct Client {
     inner: ffi::amps_ffi_client_t,
+    _disconnect_handler: Option<*mut c_void>,
 }
 
 // Mark Client as Send but NOT Sync (AMPS client is not thread-safe)
@@ -86,7 +87,10 @@ impl Client {
             return Err(AmpsError::from(error_info));
         }
 
-        Ok(Client { inner: handle })
+        Ok(Client {
+            inner: handle,
+            _disconnect_handler: None,
+        })
     }
 
     /// Connects to an AMPS server at the specified URI.
@@ -616,13 +620,16 @@ impl Client {
     /// Sets a disconnect handler callback.
     ///
     /// The handler will be called when the client is disconnected from the server.
+    /// Note: the handler cannot safely access the `Client` since it is called from
+    /// the AMPS internal thread. Use external state (e.g., `Arc<AtomicBool>`) to
+    /// signal disconnection.
     ///
     /// # Arguments
     ///
-    /// * `handler` - A callback function receiving the client handle and user data
+    /// * `handler` - A callback function invoked on disconnect
     pub fn set_disconnect_handler<F>(&mut self, handler: F) -> AmpsResult<()>
     where
-        F: FnMut(&mut Client) + Send + 'static,
+        F: FnMut() + Send + 'static,
     {
         let mut error_info = ffi::amps_ffi_error_info_t {
             code: ffi::amps_ffi_error_t_AMPS_FFI_OK,
@@ -630,7 +637,7 @@ impl Client {
         };
 
         // Wrap the handler in a Box to heap-allocate
-        let handler_box: Box<Box<dyn FnMut(&mut Client) + Send>> = Box::new(Box::new(handler));
+        let handler_box: Box<Box<dyn FnMut() + Send>> = Box::new(Box::new(handler));
         let user_data: *mut c_void = Box::into_raw(handler_box) as *mut c_void;
 
         let result = unsafe {
@@ -644,10 +651,18 @@ impl Client {
 
         if result as i32 != ffi::amps_ffi_error_t_AMPS_FFI_OK as i32 {
             unsafe {
-                let _: Box<Box<dyn FnMut(&mut Client) + Send>> = Box::from_raw(user_data as *mut _);
+                let _: Box<Box<dyn FnMut() + Send>> = Box::from_raw(user_data as *mut _);
             }
             return Err(AmpsError::from(error_info));
         }
+
+        // Free the previous disconnect handler if any
+        if let Some(old) = self._disconnect_handler.take() {
+            unsafe {
+                let _: Box<Box<dyn FnMut() + Send>> = Box::from_raw(old as *mut _);
+            }
+        }
+        self._disconnect_handler = Some(user_data);
 
         Ok(())
     }
@@ -677,6 +692,12 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
+        // Free the disconnect handler closure if set
+        if let Some(handler_ptr) = self._disconnect_handler.take() {
+            unsafe {
+                let _: Box<Box<dyn FnMut() + Send>> = Box::from_raw(handler_ptr as *mut _);
+            }
+        }
         if !self.inner.is_null() {
             unsafe {
                 ffi::amps_ffi_client_destroy(self.inner);
@@ -710,14 +731,8 @@ extern "C" fn disconnect_handler_trampoline(
     }
 
     unsafe {
-        // Note: We can't safely reconstruct a Client here since we don't own it.
-        // The handler should be designed to work without the client reference
-        // or the user should use external state (Arc<Mutex<...>>) to track disconnects.
-        let handler = &mut *(user_data as *mut Box<dyn FnMut(&mut Client) + Send>);
-        // We can't actually call this handler safely without a valid Client.
-        // This is a limitation that would need additional design work.
-        // For now, we just ignore the call.
-        let _ = handler;
+        let handler = &mut *(user_data as *mut Box<dyn FnMut() + Send>);
+        handler();
     }
 }
 

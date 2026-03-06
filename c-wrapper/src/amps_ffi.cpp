@@ -104,6 +104,85 @@ static void set_error(amps_ffi_error_info_t* error, amps_ffi_error_t code, const
         return AMPS_FFI_ERROR_UNKNOWN; \
     }
 
+/* ── Same as CATCH_AMPS_EXCEPTIONS but deletes a heap-allocated context on error ── */
+#define CATCH_AMPS_EXCEPTIONS_WITH_CLEANUP(ctx_ptr, block) \
+    try { \
+        block; \
+        return AMPS_FFI_OK; \
+    } catch (const AMPS::AlreadyConnectedException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_ALREADY_CONNECTED, e.what()); \
+        return AMPS_FFI_ERROR_ALREADY_CONNECTED; \
+    } catch (const AMPS::AuthenticationException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_AUTHENTICATION, e.what()); \
+        return AMPS_FFI_ERROR_AUTHENTICATION; \
+    } catch (const AMPS::ConnectionRefusedException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_CONNECTION_REFUSED, e.what()); \
+        return AMPS_FFI_ERROR_CONNECTION_REFUSED; \
+    } catch (const AMPS::DisconnectedException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_DISCONNECTED, e.what()); \
+        return AMPS_FFI_ERROR_DISCONNECTED; \
+    } catch (const AMPS::NameInUseException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_NAME_IN_USE, e.what()); \
+        return AMPS_FFI_ERROR_NAME_IN_USE; \
+    } catch (const AMPS::NotEntitledException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_NOT_ENTITLED, e.what()); \
+        return AMPS_FFI_ERROR_NOT_ENTITLED; \
+    } catch (const AMPS::TimedOutException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_TIMEOUT, e.what()); \
+        return AMPS_FFI_ERROR_TIMEOUT; \
+    } catch (const AMPS::ConnectionException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_CONNECTION, e.what()); \
+        return AMPS_FFI_ERROR_CONNECTION; \
+    } catch (const AMPS::BadFilterException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_BAD_FILTER, e.what()); \
+        return AMPS_FFI_ERROR_BAD_FILTER; \
+    } catch (const AMPS::BadRegexTopicException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_BAD_REGEX_TOPIC, e.what()); \
+        return AMPS_FFI_ERROR_BAD_REGEX_TOPIC; \
+    } catch (const AMPS::BadSowKeyException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_BAD_SOW_KEY, e.what()); \
+        return AMPS_FFI_ERROR_BAD_SOW_KEY; \
+    } catch (const AMPS::InvalidTopicException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_INVALID_TOPIC, e.what()); \
+        return AMPS_FFI_ERROR_INVALID_TOPIC; \
+    } catch (const AMPS::PublishException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_PUBLISH, e.what()); \
+        return AMPS_FFI_ERROR_PUBLISH; \
+    } catch (const AMPS::SubscriptionAlreadyExistsException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_SUBSCRIPTION_EXISTS, e.what()); \
+        return AMPS_FFI_ERROR_SUBSCRIPTION_EXISTS; \
+    } catch (const AMPS::PublishStoreGapException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_PUBLISH_STORE_GAP, e.what()); \
+        return AMPS_FFI_ERROR_PUBLISH_STORE_GAP; \
+    } catch (const AMPS::AMPSException& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_UNKNOWN, e.what()); \
+        return AMPS_FFI_ERROR_UNKNOWN; \
+    } catch (const std::exception& e) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_UNKNOWN, e.what()); \
+        return AMPS_FFI_ERROR_UNKNOWN; \
+    } catch (...) { \
+        delete ctx_ptr; \
+        set_error(error, AMPS_FFI_ERROR_UNKNOWN, "Unknown exception"); \
+        return AMPS_FFI_ERROR_UNKNOWN; \
+    }
+
 /* ── Helper: NULL-pointer guard (returns error code) ── */
 #define NULL_GUARD(...) \
     do { \
@@ -262,7 +341,7 @@ int amps_ffi_client_subscribe(amps_ffi_client_t client,
 
     CallbackContext* ctx = new CallbackContext{ handler, user_data };
 
-    CATCH_AMPS_EXCEPTIONS(
+    CATCH_AMPS_EXCEPTIONS_WITH_CLEANUP(ctx,
         AMPS::Command cmd("subscribe");
         cmd.setTopic(topic);
         if (filter) cmd.setFilter(filter);
@@ -309,7 +388,7 @@ int amps_ffi_client_sow(amps_ffi_client_t client,
 
     CallbackContext* ctx = new CallbackContext{ handler, user_data };
 
-    CATCH_AMPS_EXCEPTIONS(
+    CATCH_AMPS_EXCEPTIONS_WITH_CLEANUP(ctx,
         AMPS::Command cmd("sow");
         cmd.setTopic(topic);
         if (filter) cmd.setFilter(filter);
@@ -336,7 +415,7 @@ int amps_ffi_client_sow_and_subscribe(amps_ffi_client_t client,
 
     CallbackContext* ctx = new CallbackContext{ handler, user_data };
 
-    CATCH_AMPS_EXCEPTIONS(
+    CATCH_AMPS_EXCEPTIONS_WITH_CLEANUP(ctx,
         AMPS::Command cmd("sow_and_subscribe");
         cmd.setTopic(topic);
         if (filter) cmd.setFilter(filter);
@@ -352,74 +431,32 @@ int amps_ffi_client_sow_and_subscribe(amps_ffi_client_t client,
  *  Message access
  * ═══════════════════════════════════════════════════════════════════════ */
 
-/* Helper to copy Field data to thread-local buffer.
- * This ensures the returned pointer remains valid after the function returns.
- * The AMPS::Field class stores data as length + pointer, but the pointer may
- * point to internal message buffer that can be invalidated.
+/* Helper macro to define a message accessor with its own thread-local buffer.
+ * Each accessor gets a dedicated buffer so that calling multiple accessors
+ * (e.g. msg.data() then msg.topic()) does not invalidate previous pointers.
  */
-static const char* copy_to_thread_local_buffer(const AMPS::Field& field, size_t* len) {
-    // Thread-local buffer to store the copied data
-    static thread_local std::string buffer;
-    
-    if (field.len() == 0 || field.data() == nullptr) {
-        if (len) *len = 0;
-        return "";
-    }
-    
-    // Copy the data to the buffer
-    buffer.assign(field.data(), field.len());
-    if (len) *len = buffer.length();
-    return buffer.c_str();
+#define DEFINE_MESSAGE_ACCESSOR(func_name, getter_method) \
+const char* func_name(amps_ffi_message_t message, size_t* len) { \
+    if (!message) return nullptr; \
+    const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message); \
+    const AMPS::Field& f = msg->getter_method(); \
+    static thread_local std::string buffer; \
+    if (f.len() == 0 || f.data() == nullptr) { \
+        if (len) *len = 0; \
+        return ""; \
+    } \
+    buffer.assign(f.data(), f.len()); \
+    if (len) *len = buffer.length(); \
+    return buffer.c_str(); \
 }
 
-const char* amps_ffi_message_get_data(amps_ffi_message_t message, size_t* len) {
-    if (!message) return nullptr;
-    const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    const AMPS::Field& f = msg->getData();
-    return copy_to_thread_local_buffer(f, len);
-}
-
-const char* amps_ffi_message_get_topic(amps_ffi_message_t message, size_t* len) {
-    if (!message) return nullptr;
-    const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    const AMPS::Field& f = msg->getTopic();
-    return copy_to_thread_local_buffer(f, len);
-}
-
-const char* amps_ffi_message_get_command(amps_ffi_message_t message, size_t* len) {
-    if (!message) return nullptr;
-    const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    const AMPS::Field& f = msg->getCommand();
-    return copy_to_thread_local_buffer(f, len);
-}
-
-const char* amps_ffi_message_get_sow_key(amps_ffi_message_t message, size_t* len) {
-    if (!message) return nullptr;
-    const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    const AMPS::Field& f = msg->getSowKey();
-    return copy_to_thread_local_buffer(f, len);
-}
-
-const char* amps_ffi_message_get_bookmark(amps_ffi_message_t message, size_t* len) {
-    if (!message) return nullptr;
-    const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    const AMPS::Field& f = msg->getBookmark();
-    return copy_to_thread_local_buffer(f, len);
-}
-
-const char* amps_ffi_message_get_sub_id(amps_ffi_message_t message, size_t* len) {
-    if (!message) return nullptr;
-    const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    const AMPS::Field& f = msg->getSubId();
-    return copy_to_thread_local_buffer(f, len);
-}
-
-const char* amps_ffi_message_get_command_id(amps_ffi_message_t message, size_t* len) {
-    if (!message) return nullptr;
-    const AMPS::Message* msg = reinterpret_cast<const AMPS::Message*>(message);
-    const AMPS::Field& f = msg->getCommandId();
-    return copy_to_thread_local_buffer(f, len);
-}
+DEFINE_MESSAGE_ACCESSOR(amps_ffi_message_get_data, getData)
+DEFINE_MESSAGE_ACCESSOR(amps_ffi_message_get_topic, getTopic)
+DEFINE_MESSAGE_ACCESSOR(amps_ffi_message_get_command, getCommand)
+DEFINE_MESSAGE_ACCESSOR(amps_ffi_message_get_sow_key, getSowKey)
+DEFINE_MESSAGE_ACCESSOR(amps_ffi_message_get_bookmark, getBookmark)
+DEFINE_MESSAGE_ACCESSOR(amps_ffi_message_get_sub_id, getSubId)
+DEFINE_MESSAGE_ACCESSOR(amps_ffi_message_get_command_id, getCommandId)
 
 /* ═══════════════════════════════════════════════════════════════════════
  *  Client configuration
@@ -460,12 +497,15 @@ int amps_ffi_client_set_disconnect_handler(amps_ffi_client_t client,
 #endif
         return AMPS_FFI_OK;
     } catch (const AMPS::AMPSException& e) {
+        delete ctx;
         set_error(error, AMPS_FFI_ERROR_UNKNOWN, e.what());
         return AMPS_FFI_ERROR_UNKNOWN;
     } catch (const std::exception& e) {
+        delete ctx;
         set_error(error, AMPS_FFI_ERROR_UNKNOWN, e.what());
         return AMPS_FFI_ERROR_UNKNOWN;
     } catch (...) {
+        delete ctx;
         set_error(error, AMPS_FFI_ERROR_UNKNOWN, "Unknown exception");
         return AMPS_FFI_ERROR_UNKNOWN;
     }
